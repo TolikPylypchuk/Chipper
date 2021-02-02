@@ -1,26 +1,39 @@
 namespace Chipper.Server
 
-open System
 open Microsoft.AspNetCore.Builder
 open Microsoft.AspNetCore.Hosting
-open Microsoft.AspNetCore.Http
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Hosting
 
+open Bolero.Remoting.Server
+open Bolero.Server.RazorHost
+open Bolero.Templating.Server
+
 type Startup() =
 
-    // This method gets called by the runtime. Use this method to add services to the container.
-    // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
     member _.ConfigureServices(services: IServiceCollection) =
-        ()
+        services.AddMvc().AddRazorRuntimeCompilation() |> ignore
+        services.AddServerSideBlazor() |> ignore
+        services
+            .AddBoleroHost()
+#if DEBUG
+            .AddHotReload(templateDir = __SOURCE_DIRECTORY__ + "/../Chipper.Client")
+#endif
+        |> ignore
 
-    // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
     member _.Configure(app: IApplicationBuilder, env: IWebHostEnvironment) =
         if env.IsDevelopment() then
             app.UseDeveloperExceptionPage() |> ignore
 
-        app.UseRouting()
-           .UseEndpoints(fun endpoints ->
-                endpoints.MapGet("/", fun context ->
-                    context.Response.WriteAsync("Hello World!")) |> ignore
-            ) |> ignore
+        app
+            .UseRemoting()
+            .UseStaticFiles()
+            .UseRouting()
+            .UseBlazorFrameworkFiles()
+            .UseEndpoints(fun endpoints ->
+#if DEBUG
+                endpoints.UseHotReload()
+#endif
+                endpoints.MapBlazorHub() |> ignore
+                endpoints.MapFallbackToPage("/_Host") |> ignore)
+            |> ignore

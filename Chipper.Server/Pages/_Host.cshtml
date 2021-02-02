@@ -1,0 +1,26 @@
+@page "/"
+
+@namespace Chipper.Server
+@using Bolero.Server.RazorHost
+
+@inject IBoleroHostConfig BoleroHostConfig
+
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Chipper</title>
+
+    <base href="/">
+
+    <link rel="stylesheet" href="css/index.css">
+</head>
+
+<body>
+    <div id="main">@(await this.Html.RenderComponentAsync<Chipper.Client.App>(this.BoleroHostConfig))</div>
+    @this.Html.RenderBoleroScript(this.BoleroHostConfig)
+</body>
+</html>
