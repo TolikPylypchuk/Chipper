@@ -41,12 +41,15 @@ type BettingRound = private {
     Moves : PlayerMove list
 }
 
+type GameId = GameId of Guid
+
 type GameType =
     | Limit
     | NoLimit
     | PotLimit
 
 type Game = private {
+    Id : GameId
     Type : GameType
     Players : NonEmptyList<Player>
     Host : Player
@@ -127,11 +130,11 @@ module Game =
         then host |> Ok
         else [ GameHostIsNotAPlayer ] |> Error
 
-    let private create' type' players host =
-        { Type = type'; Players = players; Host = host; Rounds = Map.empty }
+    let private create' id type' players host =
+        { Id = id; Type = type'; Players = players; Host = host; Rounds = Map.empty }
 
-    let create type' players host =
-        create' type' <!> validatePlayersNumber players <*> validateHost players host
+    let create id type' players host =
+        create' id type' <!> validatePlayersNumber players <*> validateHost players host
 
     let type' game = game.Type
 

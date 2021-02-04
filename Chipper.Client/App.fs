@@ -9,13 +9,15 @@ open Bolero.Templating.Client
 type Model = unit
 type Message = unit
 
+type MainTemplate = Template<"wwwroot/html/main.html">
+
 module App =
 
     let update message model =
         (), Cmd.none
 
     let render model dispatch =
-        RawHtml "<p>Hello world!</p>"
+        MainTemplate().Elt()
 
 type App() =
     inherit ProgramComponent<Model, Message>()
