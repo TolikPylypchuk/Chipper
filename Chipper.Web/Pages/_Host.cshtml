@@ -1,6 +1,6 @@
 @page "/"
 
-@namespace Chipper.Server
+@namespace Chipper.Web
 @using Bolero.Server.RazorHost
 
 @inject IBoleroHostConfig BoleroHostConfig
@@ -21,8 +21,7 @@
 </head>
 
 <body>
-    <div id="main">@(await this.Html.RenderComponentAsync<Chipper.Client.App>(this.BoleroHostConfig))</div>
-    @this.Html.RenderBoleroScript(this.BoleroHostConfig)
+    @(await this.Html.RenderComponentAsync<Chipper.Web.ChipperApp>(this.BoleroHostConfig))
 
     <script src="~/lib/twitter-bootstrap/js/bootstrap.min.js"></script>
 </body>

@@ -1,17 +1,15 @@
-namespace Chipper.Client
+namespace Chipper.Web
 
 open Elmish
 
 open Bolero
-open Bolero.Remoting.Client
-open Bolero.Templating.Client
 
 type Model = unit
 type Message = unit
 
 type MainTemplate = Template<"wwwroot/html/main.html">
 
-module App =
+module ChipperApp =
 
     let update message model =
         (), Cmd.none
@@ -19,11 +17,8 @@ module App =
     let render model dispatch =
         MainTemplate().Elt()
 
-type App() =
+type ChipperApp() =
     inherit ProgramComponent<Model, Message>()
 
     override _.Program =
-        Program.mkProgram (fun _ -> (), Cmd.none) App.update App.render
-#if DEBUG
-        |> Program.withHotReload
-#endif
+        Program.mkProgram (fun _ -> (), Cmd.none) ChipperApp.update ChipperApp.render
