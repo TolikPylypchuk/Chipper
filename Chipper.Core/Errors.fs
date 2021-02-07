@@ -2,19 +2,14 @@ namespace Chipper.Core
 
 type ChipError = InvalidChipValue of int
 
+type BetAmountError = InvalidBetAmout of int
+
 type PlayerError = InvalidPlayerName of string
 
-type BettingRoundError =
-    | SmallBlindInvalid of int
-    | BigBlindInvalid of int
-    | MinimumRaiseInvalid of int
-
-type GameError =
-    | GameHostIsNotAPlayer
-    | InvalidGamePlayersNumber of int
+type GameSessionError = InvalidGamePlayersNumber of int
 
 type DomainError =
     | Chip of ChipError
+    | BetAmount of BetAmountError
     | Player of PlayerError
-    | BettingRound of BettingRoundError
-    | Game of GameError
+    | GameSession of GameSessionError

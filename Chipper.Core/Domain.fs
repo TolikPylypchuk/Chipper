@@ -10,6 +10,8 @@ type Chip = private Chip of int
 
 type Pot = Pot of Chip list
 
+type BetAmount = private BetAmount of int
+
 type Bet = Bet of NonEmptyList<Chip>
 
 type Move =
@@ -23,37 +25,42 @@ type Player = private {
     Chips : Chip list
 }
 
-type PlayerMove = {
-    Player : Player
-    Move : Move
+type BettingRound = {
+    MinimumRaise : BetAmount
+    Moves : Move list
 }
 
-type BettingRoundName =
-    | PreFlop
-    | Flop
-    | Turn
-    | River
-
-type BettingRound = private {
-    SmallBlind : int
-    BigBlind : int
-    MinimumRaise : int
-    Moves : PlayerMove list
-}
-
-type GameId = GameId of Guid
-
-type GameType =
+type RaiseType =
     | Limit
     | NoLimit
     | PotLimit
 
-type Game = private {
+type BlindBets = {
+    SmallBlind : BetAmount
+    BigBlind : BetAmount
+}
+
+type AnteBet = AnteBet of BetAmount
+
+type BettingType =
+    | Blinds of BlindBets
+    | Ante of AnteBet
+    
+type GameId = GameId of Guid
+    
+type Game = {
     Id : GameId
-    Type : GameType
+    Rounds : BettingRound list
+}
+
+type GameSessionId = GameSessionId of Guid
+
+type GameSession = private {
+    Id : GameSessionId
     Players : NonEmptyList<Player>
-    Host : Player
-    Rounds : Map<BettingRoundName, BettingRound>
+    RaiseType : RaiseType
+    BettingType : BettingType
+    Games : Game list
 }
 
 [<RequireQualifiedAccess>]
@@ -66,9 +73,15 @@ module Chip =
 
     let value (Chip chip) = chip
 
-    let addChips chips player = { player with Chips = player.Chips @ chips |> List.sort }
+[<RequireQualifiedAccess>]
+module BetAmount =
 
-    let removeChips chips player = { player with Chips = player.Chips |> List.except chips }
+    let create amount =
+        if amount > 0
+        then BetAmount amount |> Ok
+        else [ InvalidBetAmout amount ] |> Error
+
+    let value (BetAmount amount) = amount
 
 [<RequireQualifiedAccess>]
 module Player =
@@ -82,67 +95,34 @@ module Player =
 
     let chips player = player.Chips
 
-[<RequireQualifiedAccess>]
-module BettingRound =
-
-    let private validateSmallBlind smallBlind =
-        if smallBlind >= 1 && smallBlind <= 50_000_000
-        then smallBlind |> Ok
-        else [ SmallBlindInvalid smallBlind ] |> Error
-
-    let private validateBigBlind bigBlind =
-        if bigBlind >= 1 && bigBlind <= 100_000_000
-        then bigBlind |> Ok
-        else [ BigBlindInvalid bigBlind ] |> Error
-
-    let private validateMinimumRaise raise =
-        if raise >= 1 && raise <= 100_000_000
-        then raise |> Ok
-        else [ MinimumRaiseInvalid raise ] |> Error
-
-    let private create' smallBlind bigBlind minimumRaise =
-        { SmallBlind = smallBlind; BigBlind = bigBlind; MinimumRaise = minimumRaise; Moves = [] }
-
-    let create smallBlind bigBlind minimumRaise =
-        create' <!> validateSmallBlind smallBlind <*> validateBigBlind bigBlind <*> validateMinimumRaise minimumRaise
-
-    let smallBlind round = round.SmallBlind
-
-    let bigBlind round = round.BigBlind
-
-    let minimumRaise round = round.MinimumRaise
-
-    let moves round = round.Moves
-
-    let addMove move round = { round with Moves = round.Moves @ [ move ] }
-
-[<RequireQualifiedAccess>]
-module Game =
+    let chipCounts player = player.Chips |> List.countBy id
     
-    let private validatePlayersNumber players =
+    let addChips chips player = { player with Chips = player.Chips @ chips |> List.sort }
+
+    let removeChips chips player = { player with Chips = player.Chips |> List.except chips }
+
+[<RequireQualifiedAccess>]
+module GameSession =
+
+    let create id players raiseType bettingType =
         let numPlayers = players |> NonEmptyList.length
-        if numPlayers >= 2 && numPlayers <= 23
-        then players |> Ok
+        if numPlayers > 1
+        then { Id = id; Players = players; RaiseType = raiseType; BettingType = bettingType; Games = [] } |> Ok
         else [ InvalidGamePlayersNumber numPlayers ] |> Error
 
-    let private validateHost players host =
-        if players |> NonEmptyList.toList |> List.contains host
-        then host |> Ok
-        else [ GameHostIsNotAPlayer ] |> Error
+    let id session = session.Id
 
-    let private create' id type' players host =
-        { Id = id; Type = type'; Players = players; Host = host; Rounds = Map.empty }
+    let players session = session.Players
 
-    let create id type' players host =
-        create' id type' <!> validatePlayersNumber players <*> validateHost players host
+    let raiseType session = session.RaiseType
 
-    let type' game = game.Type
+    let bettingType session = session.BettingType
 
-    let players game = game.Players
-
-    let host game = game.Host
+    let games session = session.Games
 
 [<AutoOpen>]
 module Patterns =
 
     let (|Chip|) (Chip chip) = chip
+    
+    let (|BetAmount|) (BetAmount amount) = amount
