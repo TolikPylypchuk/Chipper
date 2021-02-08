@@ -1,0 +1,41 @@
+name: Deploy the dev version of the app
+
+on:
+  push:
+    branches: [ dev ]
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup .NET
+        uses: actions/dotnet@v1
+        with:
+          dotnet-version: 5.0.102
+
+      - name: Publish the app
+        run: |
+          dotnet publish -c Release -r linux-x64 -o ./publish --nologo -p:PublishTrimmed=true
+          mv publish/Chipper.Web publish/chipper
+        
+      - name: Push the app to Digital Ocean
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.SSH_HOST_DEV }}
+          username: ${{ secrets.SSH_USER_DEV }}
+          key: ${{ secrets.SSH_KEY_DEV }}
+          rm: true
+          source: "publish/"
+          target: "/var/www/chipper/"
+
+      - name: Restart the app service
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST_DEV }}
+          username: ${{ secrets.SSH_USER_DEV }}
+          key: ${{ secrets.SSH_KEY_DEV }}
+          script: "sudo /bin/systemctl restart chipper"
