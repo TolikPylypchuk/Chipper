@@ -13,7 +13,7 @@ let configureServices (services: IServiceCollection) =
     services.AddBoleroHost() |> ignore
 
 let configure (ctx : WebHostBuilderContext) (app: IApplicationBuilder) =
-    if ctx.HostingEnvironment.IsDevelopment() then
+    if not <| ctx.HostingEnvironment.IsProduction() then
         app.UseDeveloperExceptionPage() |> ignore
 
     app
@@ -27,6 +27,7 @@ let configure (ctx : WebHostBuilderContext) (app: IApplicationBuilder) =
 
 let createHostBuilder args =
     Host.CreateDefaultBuilder(args)
+        .UseSystemd()
         .ConfigureWebHostDefaults(fun webBuilder ->
             webBuilder
                 .ConfigureServices(configureServices)
