@@ -22,13 +22,20 @@ jobs:
           dotnet publish -c Release -r linux-x64 -o ./chipper --nologo
           mv chipper/Chipper.Web chipper/chipper
         
+      - name: Clear the target directory
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST_DEV }}
+          username: ${{ secrets.SSH_USER_DEV }}
+          key: ${{ secrets.SSH_KEY_DEV }}
+          script: "rm -rf /var/www/chipper"
+
       - name: Push the app to Digital Ocean
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.SSH_HOST_DEV }}
           username: ${{ secrets.SSH_USER_DEV }}
           key: ${{ secrets.SSH_KEY_DEV }}
-          rm: true
           source: "chipper/"
           target: "/var/www/"
 
