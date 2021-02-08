@@ -19,8 +19,8 @@ jobs:
 
       - name: Publish the app
         run: |
-          dotnet publish -c Release -r linux-x64 -o ./publish --nologo
-          mv publish/Chipper.Web publish/chipper
+          dotnet publish -c Release -r linux-x64 -o ./chipper --nologo
+          mv chipper/Chipper.Web chipper/chipper
         
       - name: Push the app to Digital Ocean
         uses: appleboy/scp-action@master
@@ -29,8 +29,8 @@ jobs:
           username: ${{ secrets.SSH_USER_DEV }}
           key: ${{ secrets.SSH_KEY_DEV }}
           rm: true
-          source: "publish/"
-          target: "/var/www/chipper/"
+          source: "chipper/"
+          target: "/var/www/"
 
       - name: Restart the app service
         uses: appleboy/ssh-action@master
