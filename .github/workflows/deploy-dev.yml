@@ -19,7 +19,7 @@ jobs:
 
       - name: Publish the app
         run: |
-          dotnet publish -c Release -r linux-x64 -o ./publish --nologo -p:PublishTrimmed=true
+          dotnet publish -c Release -r linux-x64 -o ./publish --nologo
           mv publish/Chipper.Web publish/chipper
         
       - name: Push the app to Digital Ocean
