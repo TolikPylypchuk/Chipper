@@ -19,7 +19,6 @@ let configure (ctx : WebHostBuilderContext) (app: IApplicationBuilder) =
     app
         .UseStaticFiles()
         .UseRouting()
-        .UseBlazorFrameworkFiles()
         .UseEndpoints(fun endpoints ->
             endpoints.MapBlazorHub() |> ignore
             endpoints.MapFallbackToPage("/_Host") |> ignore)
