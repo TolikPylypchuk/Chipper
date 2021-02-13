@@ -10,7 +10,7 @@ open Bolero.Server.RazorHost
 let configureServices (services: IServiceCollection) =
     services.AddRazorPages().AddRazorRuntimeCompilation() |> ignore
     services.AddServerSideBlazor() |> ignore
-    services.AddBoleroHost() |> ignore
+    services.AddBoleroHost(server = true) |> ignore
 
 let configure (ctx : WebHostBuilderContext) (app: IApplicationBuilder) =
     if not <| ctx.HostingEnvironment.IsProduction() then
