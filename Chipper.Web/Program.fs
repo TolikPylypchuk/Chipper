@@ -8,7 +8,7 @@ open Microsoft.Extensions.Hosting
 open Bolero.Server.RazorHost
 
 let configureServices (services: IServiceCollection) =
-    services.AddMvc().AddRazorRuntimeCompilation() |> ignore
+    services.AddRazorPages().AddRazorRuntimeCompilation() |> ignore
     services.AddServerSideBlazor() |> ignore
     services.AddBoleroHost() |> ignore
 
@@ -16,8 +16,7 @@ let configure (ctx : WebHostBuilderContext) (app: IApplicationBuilder) =
     if not <| ctx.HostingEnvironment.IsProduction() then
         app.UseDeveloperExceptionPage() |> ignore
 
-    app
-        .UseStaticFiles()
+    app.UseStaticFiles()
         .UseRouting()
         .UseEndpoints(fun endpoints ->
             endpoints.MapBlazorHub() |> ignore
