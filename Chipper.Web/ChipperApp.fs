@@ -1,27 +1,32 @@
 module Chipper.Web.ChipperApp
 
+open System
+open Microsoft.Extensions.DependencyInjection
+
 open Elmish
-
 open Bolero
-open Bolero.Html
 
-let router = Router.infer SetPage (fun m -> m.Page)
+open Chipper.Core
 
-let init _ = { Page = StartPage }, Cmd.none
+let init _ = { Page = HomePage; State = NoState }, Cmd.none
 
-let update message model =
+let update newId message model =
     match message with
     | SetPage page -> { model with Page = page }, Cmd.none
-    | CreateSession -> { Page = NotImplemented }, Cmd.none
+    | CreateSession ->
+        let id = newId ()
+        { model with Page = StartPage id }, Cmd.none
 
-let render model dispatch =
+let render settings model dispatch =
     match model.Page with
-    | StartPage -> View.startPage dispatch
-    | _ -> View.notImplemented
+    | HomePage -> View.homePage dispatch
+    | StartPage id -> View.startPage settings (GameSessionId id) dispatch
+    | _ -> View.notImplementedPage
 
 type AppComponent() =
     inherit ProgramComponent<Model, Message>()
 
-    override _.Program =
-        Program.mkProgram init update render
+    override this.Program =
+        let settings = this.Services.GetRequiredService<AppSettings>()
+        Program.mkProgram init (update Guid.NewGuid) (render settings)
         |> Program.withRouter router

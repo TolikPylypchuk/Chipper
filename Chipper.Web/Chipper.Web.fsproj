@@ -5,8 +5,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="AppSettings.fs" />
     <Compile Include="Model.fs" />
     <Compile Include="Message.fs" />
+    <Compile Include="AppRouter.fs" />
     <Compile Include="View.fs" />
     <Compile Include="ChipperApp.fs" />
     <Compile Include="Program.fs" />
@@ -14,6 +16,7 @@
 
   <ItemGroup>
     <PackageReference Include="Bolero.Server" Version="0.16.27" />
+    <PackageReference Include="Flurl" Version="3.0.1" />
     <PackageReference Include="LibSassBuilder" Version="1.4.0" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" Version="5.0.3" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="5.0.0" />
