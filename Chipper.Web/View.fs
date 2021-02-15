@@ -4,7 +4,7 @@ open Bolero.Html
 
 open Flurl
 
-open Chipper.Core
+open Chipper.Core.Domain
 
 let class' = attr.``class``
 let type' = attr.``type``

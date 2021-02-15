@@ -1,13 +1,12 @@
 module Chipper.Web.ChipperApp
 
-open System
 open Microsoft.Extensions.DependencyInjection
 
 open Elmish
 open Blazored.LocalStorage
 open Bolero
 
-open Chipper.Core
+open Chipper.Core.Persistence
 
 let init getState =
     let model = { Page = HomePage; State = NotLoaded }
@@ -17,7 +16,7 @@ let init getState =
 
 let startNewSession newId setState model =
     let id = newId ()
-    let state = StartingSession <| GameSessionId id
+    let state = StartingSession <| id
     Async.StartImmediate <| setState state
     { model with Page = StartPage; State = state }, Cmd.none
 
@@ -48,14 +47,13 @@ type AppComponent() =
 
     override this.Program =
         let settings = this.Services.GetRequiredService<AppSettings>()
-
+        let repo = this.Services.GetRequiredService<GameSessionRepository>()
         let localStorage = this.Services.GetRequiredService<ILocalStorageService>()
 
-        let newId = Guid.NewGuid
         let getState = LocalStorage.getLocalState localStorage
         let setState = LocalStorage.setLocalState localStorage
 
-        let update = update newId setState
+        let update = update repo.CreateId setState
         let view = view settings
 
         Program.mkProgram (fun _ -> init getState) update view

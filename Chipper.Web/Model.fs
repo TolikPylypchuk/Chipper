@@ -2,7 +2,7 @@ namespace Chipper.Web
 
 open System
 
-open Chipper.Core
+open Chipper.Core.Domain
 
 type Page =
     | HomePage

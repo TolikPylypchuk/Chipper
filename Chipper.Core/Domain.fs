@@ -1,10 +1,7 @@
-namespace Chipper.Core
+module Chipper.Core.Domain
 
 open System
-
 open FSharpx.Collections
-
-open FSharpPlus
 
 type Chip = private Chip of int
 
@@ -55,13 +52,31 @@ type Game = {
 
 type GameSessionId = GameSessionId of Guid
 
-type GameSession = private {
+type GameSessionConfiguration = {
     Id : GameSessionId
     Players : NonEmptyList<Player>
     RaiseType : RaiseType
     BettingType : BettingType
+}
+
+type GameSession = private {
+    Config : GameSessionConfiguration
     Games : Game list
 }
+
+type ChipError = InvalidChipValue of int
+
+type BetAmountError = InvalidBetAmout of int
+
+type PlayerError = InvalidPlayerName of string
+
+type GameSessionError = InvalidGamePlayersNumber of int
+
+type DomainError =
+    | ChipError of ChipError
+    | BetAmountError of BetAmountError
+    | PlayerError of PlayerError
+    | GameSessionError of GameSessionError
 
 [<RequireQualifiedAccess>]
 module Chip =
@@ -104,20 +119,17 @@ module Player =
 [<RequireQualifiedAccess>]
 module GameSession =
 
-    let create id players raiseType bettingType =
-        let numPlayers = players |> NonEmptyList.length
+    let fromConfig sessionConfig =
+        let numPlayers = sessionConfig.Players |> NonEmptyList.length
         if numPlayers > 1
-        then { Id = id; Players = players; RaiseType = raiseType; BettingType = bettingType; Games = [] } |> Ok
+        then { Config = sessionConfig; Games = [] } |> Ok
         else [ InvalidGamePlayersNumber numPlayers ] |> Error
 
-    let id session = session.Id
-
-    let players session = session.Players
-
-    let raiseType session = session.RaiseType
-
-    let bettingType session = session.BettingType
-
+    let config session = session.Config
+    let id session = session.Config.Id
+    let players session = session.Config.Players
+    let raiseType session = session.Config.RaiseType
+    let bettingsType session = session.Config.BettingType
     let games session = session.Games
 
 [<AutoOpen>]
