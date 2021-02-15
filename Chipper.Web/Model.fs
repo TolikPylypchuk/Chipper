@@ -6,12 +6,13 @@ open Chipper.Core
 
 type Page =
     | HomePage
-    | StartPage of sessionId : Guid
-    | JoinPage of sessionId : Guid
-    | ConfigureSessionPage of sessionId : Guid
+    | StartPage
+    | JoinPage of SessionId : Guid
+    | ConfigureSessionPage
     | NotImplementedPage
 
-type ModelState =
+type LocalState =
+    | NotLoaded
     | NoState
     | StartingSession of GameSessionId
     | JoiningSession of GameSessionId
@@ -19,5 +20,5 @@ type ModelState =
 
 type Model = {
     Page : Page
-    State : ModelState
+    State : LocalState
 }

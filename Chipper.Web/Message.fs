@@ -4,4 +4,7 @@ open Bolero
 
 type Message =
     | SetPage of Page
-    | CreateSession
+    | SetInitialState of LocalState
+    | StartGameSession
+    | ConfigureGameSession
+    | SetError of exn

@@ -20,7 +20,11 @@ let homePage dispatch =
         ]
 
         div [ class' "text-center m-4" ] [
-            button [ type' "button"; class' "btn btn-primary btn-lg"; on.click (fun _ -> dispatch CreateSession) ] [
+            button [
+                type' "button"
+                class' "btn btn-primary btn-lg"
+                on.click (fun _ -> dispatch StartGameSession)
+            ] [
                 text "Start playing"
             ]
         ]
@@ -44,7 +48,11 @@ let startPage settings (GameSessionId sessionId) dispatch =
             ]
 
             div [ class' "text-center m-4" ] [
-                button [ type' "button"; class' "btn btn-primary btn-lg"; on.click (fun _ -> dispatch CreateSession) ] [
+                button [
+                    type' "button"
+                    class' "btn btn-primary btn-lg"
+                    on.click (fun _ -> dispatch ConfigureGameSession)
+                ] [
                     text "Configure the game"
                 ]
             ]

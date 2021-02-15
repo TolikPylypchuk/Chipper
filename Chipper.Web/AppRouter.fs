@@ -14,16 +14,16 @@ let router = {
     setRoute = fun path ->
         match path.Split('/', StringSplitOptions.RemoveEmptyEntries) with
         | [||] -> Some HomePage
-        | [| "start"; Guid id |] -> Some <| StartPage id
+        | [| "start" |] -> Some StartPage
         | [| "join"; Guid id |] -> Some <| JoinPage id
-        | [| "configure"; Guid id |] -> Some <| JoinPage id
-        | [| "not-implemented" |] -> Some <| NotImplementedPage
+        | [| "configure" |] -> Some ConfigureSessionPage
+        | [| "not-implemented" |] -> Some NotImplementedPage
         | _ -> None
         |> Option.map SetPage
     getRoute = function
         | HomePage -> "/"
-        | StartPage id -> sprintf "/start/%O" id
+        | StartPage -> "/start"
         | JoinPage id -> sprintf "/join/%O" id
-        | ConfigureSessionPage id -> sprintf "/configure/%O" id
+        | ConfigureSessionPage -> "/configure"
         | NotImplementedPage -> "/not-implemented"
 }

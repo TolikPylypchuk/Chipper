@@ -1,6 +1,7 @@
 module Chipper.Web.Program
 
 open System
+open System.Text.Json.Serialization
 
 open Microsoft.AspNetCore.Builder
 open Microsoft.AspNetCore.Hosting
@@ -8,6 +9,7 @@ open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Configuration
 open Microsoft.Extensions.Hosting
 
+open Blazored.LocalStorage
 open Bolero.Server.RazorHost
 
 let configureSettings (services: IServiceProvider) =
@@ -17,7 +19,15 @@ let configureSettings (services: IServiceProvider) =
     { UrlRoot = appConfig.[nameof s.UrlRoot] }
 
 let configureServices (services: IServiceCollection) =
-    services.AddRazorPages().AddRazorRuntimeCompilation() |> ignore
+    services.AddRazorPages()
+        .AddJsonOptions(fun options -> options.JsonSerializerOptions.Converters.Add(JsonFSharpConverter()))
+        .AddRazorRuntimeCompilation()
+        |> ignore
+
+    services.AddBlazoredLocalStorage(fun options ->
+        options.JsonSerializerOptions.Converters.Add(JsonFSharpConverter()))
+        |> ignore
+
     services.AddServerSideBlazor() |> ignore
     services.AddBoleroHost(server = true) |> ignore
     services.AddSingleton<AppSettings>(configureSettings) |> ignore
