@@ -2,37 +2,13 @@ module Chipper.Web.ChipperApp
 
 open Microsoft.Extensions.DependencyInjection
 
-open FsToolkit.ErrorHandling
-
-open Blazored.LocalStorage
 open Elmish
 open Flurl
 open Bolero
 
-open Chipper.Core
 open Chipper.Core.Domain
 open Chipper.Core.Persistence
-
-let getState storage repo = async {
-    let! localState = storage.GetState ()
-    let! currentState = async {
-        match localState with
-        | StartingSession newSession ->
-            match! repo |> getSession newSession.Id with
-            | Ok (NewSession newSession) -> return StartingSession newSession |> Some
-            | _ -> return None
-        | _ -> return localState |> Some
-    }
-
-    match currentState with
-    | Some state ->
-        if state <> localState then
-            do! storage.SetState state
-        return state
-    | None ->
-        do! storage.ClearState ()
-        return NoState
-}
+open Chipper.Web.Workflows
 
 let init storage repo =
     let model = { Page = HomePage; State = NotLoaded }
@@ -40,43 +16,47 @@ let init storage repo =
 
     model, cmd
 
-let startNewSession storage repo model =
-    let result = asyncResult {
-        let! name = gameSessionName "test"
-        let! newSession = repo |> createSession name
-
-        let state = StartingSession newSession
-        do! storage.SetState state
-        return SetModel { model with Page = StartPage; State = state }
-    }
-
-    result |> handleAsyncMessageError
-
 let update storage repo message model =
+    let doNothing = model, Cmd.none
     match message, model.State with
+
     | SetInitialState state, _ -> { model with State = state }, Cmd.none
+
     | SetPage page, _ -> { model with Page = page }, Cmd.none
+
     | SetModel model, _ -> model, Cmd.none
-    | _, NotLoaded -> model, Cmd.none
+
+    | _, NotLoaded -> doNothing
+
     | SetError e, _ ->
         printfn "An unhandled error appeared: %O" e
-        model, Cmd.none
+        doNothing
+
     | SetException e, _ ->
         printfn "%O" e.Message
-        model, Cmd.none
-    | AddSessionName _, _ -> model, Cmd.none
-    | StartGameSession, StartingSession _ ->
-        { model with Page = StartPage }, Cmd.none
+        doNothing
+        
     | StartGameSession, _ ->
-        model, Cmd.OfAsync.result <| startNewSession storage repo model
+        { model with Page = StartPage; State = AddingSessionName "" }, Cmd.none
+
+    | InputSessionName name, _ ->
+        { model with State = AddingSessionName name }, Cmd.none
+
+    | SaveSessionName, AddingSessionName name ->
+        model, Cmd.OfAsync.result <| startNewSession storage repo model name
+        
+    | SaveSessionName, _ ->
+        doNothing
+
     | ConfigureGameSession, _ ->
-        model, Cmd.none
+        doNothing
 
 let view createJoinUrl model dispatch =
     match model.Page, model.State with
     | _, NotLoaded -> Empty
     | HomePage, _ -> View.homePage dispatch
-    | StartPage, StartingSession newSession -> View.startPage (createJoinUrl newSession.Id) dispatch
+    | StartPage, AddingSessionName name -> View.startPage (name |> Model.canSaveName) dispatch
+    | InvitePage, StartingSession newSession -> View.invitePage (createJoinUrl newSession.Id) dispatch
     | _ -> View.notImplementedPage
 
 type AppComponent() =
@@ -85,13 +65,7 @@ type AppComponent() =
     override this.Program =
         let settings = this.Services.GetRequiredService<AppSettings>()
         let repo = this.Services.GetRequiredService<GameSessionRepository>()
-        let localStorage = this.Services.GetRequiredService<ILocalStorageService>()
-
-        let storage = {
-            GetState = fun () -> LocalStorage.getLocalState localStorage
-            SetState = LocalStorage.setLocalState localStorage
-            ClearState = fun () -> LocalStorage.clearLocalState localStorage
-        }
+        let storage = this.Services.GetRequiredService<LocalStorage>()
 
         let createJoinUrl = fun (GameSessionId id) -> Url.Combine(settings.UrlRoot, (router.Link <| JoinPage id))
 

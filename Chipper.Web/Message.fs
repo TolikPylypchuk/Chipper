@@ -8,7 +8,8 @@ type Message =
     | SetInitialState of LocalState
     | SetModel of Model
     | StartGameSession
-    | AddSessionName of GameSessionName
+    | InputSessionName of string
+    | SaveSessionName
     | ConfigureGameSession
     | SetError of ChipperError
     | SetException of exn

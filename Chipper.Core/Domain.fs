@@ -57,11 +57,13 @@ type GameSessionName = private GameSessionName of string
 type NewGameSession = {
     Id : GameSessionId
     Name : GameSessionName
+    Date : DateTime
 }
 
 type GameSessionConfig = {
     Id : GameSessionId
     Name : GameSessionName
+    Date : DateTime
     Players : NonEmptyList<Player>
     RaiseType : RaiseType
     BettingType : BettingType

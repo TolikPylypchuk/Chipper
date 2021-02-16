@@ -2,6 +2,7 @@ namespace Chipper.Web
 
 open System
 
+open Chipper.Core
 open Chipper.Core.Domain
 
 type Page =
@@ -16,6 +17,7 @@ type Page =
 type LocalState =
     | NotLoaded
     | NoState
+    | AddingSessionName of string
     | StartingSession of NewGameSession
     | JoiningSession of GameSessionId
     | ConfiguringSession of GameSessionId
@@ -24,3 +26,10 @@ type Model = {
     Page : Page
     State : LocalState
 }
+
+module Model =
+
+    let canSaveName name =
+        match name |> gameSessionName with
+        | Ok _ -> true
+        | _ -> false

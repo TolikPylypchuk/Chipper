@@ -17,11 +17,20 @@ open Chipper.Core
 open Chipper.Core.Domain
 open Chipper.Core.Persistence
 
-let configureSettings (services: IServiceProvider) =
+let settings (services: IServiceProvider) =
     let config = services.GetRequiredService<IConfiguration>()
     let appConfig = config.GetSection("App")
     let s = Unchecked.defaultof<AppSettings>
     { UrlRoot = appConfig.[nameof s.UrlRoot] }
+
+let localStorage (services : IServiceProvider) =
+    let localStorage = services.GetRequiredService<ILocalStorageService>()
+    
+    {
+        GetState = fun () -> LocalStorage.getLocalState localStorage
+        SetState = LocalStorage.setLocalState localStorage
+        ClearState = fun () -> LocalStorage.clearLocalState localStorage
+    }
 
 let inMemoryRepository () =
     let storage = Dictionary<GameSessionId, PersistentGameSession>()
@@ -36,7 +45,7 @@ let inMemoryRepository () =
 
         CreateSession = fun name -> async {
             let id = Guid.NewGuid() |> GameSessionId
-            let session = { Id = id; Name = name }
+            let session = { Id = id; Name = name; Date = DateTime.Now }
             storage.Add(id, NewSession session)
             return Ok session
         }
@@ -58,8 +67,11 @@ let configureServices (services: IServiceCollection) =
 
     services.AddServerSideBlazor() |> ignore
     services.AddBoleroHost(server = true) |> ignore
-    services.AddSingleton<AppSettings>(configureSettings) |> ignore
-    services.AddSingleton<GameSessionRepository>(inMemoryRepository ()) |> ignore
+    services
+        .AddSingleton<AppSettings>(settings)
+        .AddSingleton<GameSessionRepository>(inMemoryRepository ())
+        .AddScoped<LocalStorage>(fun services -> localStorage services)
+        |> ignore
 
 let configure (ctx : WebHostBuilderContext) (app: IApplicationBuilder) =
     if not <| ctx.HostingEnvironment.IsProduction() then
