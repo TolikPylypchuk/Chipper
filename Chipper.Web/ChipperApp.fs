@@ -2,7 +2,7 @@ module Chipper.Web.ChipperApp
 
 open Microsoft.Extensions.DependencyInjection
 
-open FSharpPlus
+open FsToolkit.ErrorHandling
 
 open Blazored.LocalStorage
 open Elmish
@@ -13,12 +13,12 @@ open Chipper.Core
 open Chipper.Core.Domain
 open Chipper.Core.Persistence
 
-let getFullState storage repo = async {
+let getState storage repo = async {
     let! localState = storage.GetState ()
     let! currentState = async {
         match localState with
         | StartingSession newSession ->
-            match! newSession.Id |> repo.GetSession with
+            match! repo |> getSession newSession.Id with
             | Ok (NewSession newSession) -> return StartingSession newSession |> Some
             | _ -> return None
         | _ -> return localState |> Some
@@ -36,22 +36,21 @@ let getFullState storage repo = async {
 
 let init storage repo =
     let model = { Page = HomePage; State = NotLoaded }
-    let cmd = Cmd.OfAsync.either (fun () -> getFullState storage repo) () SetInitialState SetError
+    let cmd = Cmd.OfAsync.either (fun () -> getState storage repo) () SetInitialState SetException
 
     model, cmd
 
 let startNewSession storage repo model =
-    model, Cmd.OfAsync.result <| (async {
-        match GameSessionName.create "test" with
-        | Ok name ->
-            match! repo.CreateSession name with
-            | Ok newSession ->
-                let state = StartingSession newSession
-                do! storage.SetState state
-                return { model with Page = StartPage; State = state }
-            | _ -> return model
-        | _ -> return model
-    } |> Async.map SetModel)
+    let result = asyncResult {
+        let! name = gameSessionName "test"
+        let! newSession = repo |> createSession name
+
+        let state = StartingSession newSession
+        do! storage.SetState state
+        return SetModel { model with Page = StartPage; State = state }
+    }
+
+    result |> handleAsyncMessageError
 
 let update storage repo message model =
     match message, model.State with
@@ -60,13 +59,16 @@ let update storage repo message model =
     | SetModel model, _ -> model, Cmd.none
     | _, NotLoaded -> model, Cmd.none
     | SetError e, _ ->
+        printfn "An unhandled error appeared: %O" e
+        model, Cmd.none
+    | SetException e, _ ->
         printfn "%O" e.Message
         model, Cmd.none
     | AddSessionName _, _ -> model, Cmd.none
     | StartGameSession, StartingSession _ ->
         { model with Page = StartPage }, Cmd.none
     | StartGameSession, _ ->
-        startNewSession storage repo model
+        model, Cmd.OfAsync.result <| startNewSession storage repo model
     | ConfigureGameSession, _ ->
         model, Cmd.none
 

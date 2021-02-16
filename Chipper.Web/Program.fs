@@ -31,7 +31,7 @@ let inMemoryRepository () =
             return
                 match storage.TryGetValue(id) with
                 | true, session -> session |> Ok
-                | _ -> id |> SessionNotFound |> Error
+                | _ -> id |> SessionNotFound |> GetSessionError |> Error
         }
 
         CreateSession = fun name -> async {

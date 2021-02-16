@@ -78,7 +78,7 @@ module Chip =
     let create value =
         if value > 0 && value <= 100_000_000
         then Chip value |> Ok
-        else [ InvalidChipValue value ] |> Error
+        else InvalidChipValue value |> Error
 
     let value (Chip chip) = chip
 
@@ -88,7 +88,7 @@ module BetAmount =
     let create amount =
         if amount > 0
         then BetAmount amount |> Ok
-        else [ InvalidBetAmout amount ] |> Error
+        else InvalidBetAmout amount |> Error
 
     let value (BetAmount amount) = amount
 
@@ -98,7 +98,7 @@ module Player =
     let create name =
         if (not <| String.IsNullOrEmpty(name)) && name.Length <= 50
         then { Name = name; Chips = [] } |> Ok
-        else [ InvalidPlayerName name ] |> Error
+        else InvalidPlayerName name |> Error
 
     let name player = player.Name
 
@@ -115,13 +115,13 @@ module GameSessionName =
     
     let create name =
         if String.IsNullOrWhiteSpace(name) then
-            [ EmptyGameSessionName ] |> Error
+            EmptyGameSessionName |> Error
         else
             let name = name.Trim()
             let nameLength = name |> String.length
             if nameLength <= 50
             then GameSessionName name |> Ok
-            else [ TooLongGameSessionName name ] |> Error
+            else TooLongGameSessionName name |> Error
     
     let value (GameSessionName name) = name
     
@@ -130,9 +130,9 @@ module GameSession =
 
     let fromConfig sessionConfig =
         let numPlayers = sessionConfig.Players |> NonEmptyList.length
-        if numPlayers > 1
+        if numPlayers > 1 && numPlayers <= 20
         then { Config = sessionConfig; Games = [] } |> Ok
-        else [ InvalidGamePlayersNumber numPlayers ] |> Error
+        else InvalidGamePlayersNumber numPlayers |> Error
 
     let config session = session.Config
     let id session = session.Config.Id

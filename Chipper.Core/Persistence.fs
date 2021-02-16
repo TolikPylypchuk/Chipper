@@ -2,13 +2,13 @@ module Chipper.Core.Persistence
 
 open Domain
 
-type GetSession = GameSessionId -> Async<Result<PersistentGameSession, GetSessionError>>
+type GetSession = GameSessionId -> Async<Result<PersistentGameSession, PersistenceError>>
 
-type CreateSession = GameSessionName -> Async<Result<NewGameSession, CreateSessionError>>
+type CreateSession = GameSessionName -> Async<Result<NewGameSession, PersistenceError>>
 
-type UpdateSession = PersistentGameSession -> Async<Result<unit, UpdateSessionError>>
+type UpdateSession = PersistentGameSession -> Async<Result<unit, PersistenceError>>
 
-type DeleteSession = GameSessionId -> Async<Result<unit, DeleteSessionError>>
+type DeleteSession = GameSessionId -> Async<Result<unit, PersistenceError>>
 
 type GameSessionRepository = {
     GetSession : GetSession

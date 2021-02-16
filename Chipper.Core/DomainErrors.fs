@@ -13,8 +13,8 @@ type GameSessionNameError =
 type GameSessionError = InvalidGamePlayersNumber of int
 
 type DomainError =
-    | ChipError of ChipError list
-    | BetAmountError of BetAmountError list
-    | PlayerError of PlayerError list
-    | GameSessionNameError of GameSessionNameError list
-    | GameSessionError of GameSessionError list
+    | ChipError of ChipError
+    | BetAmountError of BetAmountError
+    | PlayerError of PlayerError
+    | GameSessionNameError of GameSessionNameError
+    | GameSessionError of GameSessionError
