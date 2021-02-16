@@ -2,10 +2,6 @@ module Chipper.Web.View
 
 open Bolero.Html
 
-open Flurl
-
-open Chipper.Core.Domain
-
 let class' = attr.``class``
 let type' = attr.``type``
 
@@ -30,7 +26,7 @@ let homePage dispatch =
         ]
     ]
 
-let startPage settings (GameSessionId sessionId) dispatch =
+let startPage joinUrl dispatch =
     concat [
         div [ class' "container" ] [
             h2 [ class' "display-2 m-lg-4 m-md-3 m-2 text-center" ] [
@@ -43,7 +39,7 @@ let startPage settings (GameSessionId sessionId) dispatch =
 
             div [ class' "m-4 text-center" ] [
                 code [ class' "fs-3" ] [
-                    text <| Url.Combine(settings.UrlRoot, (router.Link <| JoinPage sessionId))
+                    text joinUrl
                 ]
             ]
 

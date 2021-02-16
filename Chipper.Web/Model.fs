@@ -7,14 +7,16 @@ open Chipper.Core.Domain
 type Page =
     | HomePage
     | StartPage
+    | InvitePage
     | JoinPage of SessionId : Guid
-    | ConfigureSessionPage
+    | ConfigurePage
+    | PlayPage
     | NotImplementedPage
 
 type LocalState =
     | NotLoaded
     | NoState
-    | StartingSession of GameSessionId
+    | StartingSession of NewGameSession
     | JoiningSession of GameSessionId
     | ConfiguringSession of GameSessionId
 

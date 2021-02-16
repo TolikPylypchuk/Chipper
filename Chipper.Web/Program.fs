@@ -13,6 +13,7 @@ open Microsoft.Extensions.Hosting
 open Blazored.LocalStorage
 open Bolero.Server.RazorHost
 
+open Chipper.Core
 open Chipper.Core.Domain
 open Chipper.Core.Persistence
 
@@ -26,14 +27,23 @@ let inMemoryRepository () =
     let storage = Dictionary<GameSessionId, PersistentGameSession>()
 
     {
-        CreateId = Guid.NewGuid >> GameSessionId
-        Get = fun id ->
-            match storage.TryGetValue(id) with
-            | true, session -> session |> Ok
-            | _ -> id |> SessionNotFound |> Error
-            |> async.Return
-        Save = fun session -> storage.Add(session |> PersistentGameSession.id, session) |> Ok |> async.Return
-        Delete = fun id -> storage.Remove(id) |> ignore |> Ok |> async.Return
+        GetSession = fun id -> async {
+            return
+                match storage.TryGetValue(id) with
+                | true, session -> session |> Ok
+                | _ -> id |> SessionNotFound |> Error
+        }
+
+        CreateSession = fun name -> async {
+            let id = Guid.NewGuid() |> GameSessionId
+            let session = { Id = id; Name = name }
+            storage.Add(id, NewSession session)
+            return Ok session
+        }
+
+        UpdateSession = fun session -> async { return storage.Add(session |> PersistentGameSession.id, session) |> Ok }
+
+        DeleteSession = fun id -> async { return storage.Remove(id) |> ignore |> Ok }
     }
 
 let configureServices (services: IServiceCollection) =

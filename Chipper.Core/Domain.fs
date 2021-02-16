@@ -52,31 +52,25 @@ type Game = {
 
 type GameSessionId = GameSessionId of Guid
 
-type GameSessionConfiguration = {
+type GameSessionName = private GameSessionName of string
+
+type NewGameSession = {
     Id : GameSessionId
+    Name : GameSessionName
+}
+
+type GameSessionConfig = {
+    Id : GameSessionId
+    Name : GameSessionName
     Players : NonEmptyList<Player>
     RaiseType : RaiseType
     BettingType : BettingType
 }
 
 type GameSession = private {
-    Config : GameSessionConfiguration
+    Config : GameSessionConfig
     Games : Game list
 }
-
-type ChipError = InvalidChipValue of int
-
-type BetAmountError = InvalidBetAmout of int
-
-type PlayerError = InvalidPlayerName of string
-
-type GameSessionError = InvalidGamePlayersNumber of int
-
-type DomainError =
-    | ChipError of ChipError
-    | BetAmountError of BetAmountError
-    | PlayerError of PlayerError
-    | GameSessionError of GameSessionError
 
 [<RequireQualifiedAccess>]
 module Chip =
@@ -115,7 +109,22 @@ module Player =
     let addChips chips player = { player with Chips = player.Chips @ chips |> List.sort }
 
     let removeChips chips player = { player with Chips = player.Chips |> List.except chips }
-
+    
+[<RequireQualifiedAccess>]
+module GameSessionName =
+    
+    let create name =
+        if String.IsNullOrWhiteSpace(name) then
+            [ EmptyGameSessionName ] |> Error
+        else
+            let name = name.Trim()
+            let nameLength = name |> String.length
+            if nameLength <= 50
+            then GameSessionName name |> Ok
+            else [ TooLongGameSessionName name ] |> Error
+    
+    let value (GameSessionName name) = name
+    
 [<RequireQualifiedAccess>]
 module GameSession =
 
