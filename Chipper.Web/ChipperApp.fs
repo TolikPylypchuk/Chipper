@@ -1,6 +1,9 @@
 module Chipper.Web.ChipperApp
 
+open System
 open Microsoft.Extensions.DependencyInjection
+
+open FSharp.Control.Reactive
 
 open Elmish
 open Flurl
@@ -9,6 +12,23 @@ open Bolero
 open Chipper.Core.Domain
 open Chipper.Core.Persistence
 open Chipper.Web.Workflows
+
+let private inputSubject = Subject.behavior ""
+
+let private inputDebouncer = inputSubject |> Observable.throttle (TimeSpan.FromMilliseconds(300.0))
+
+let cmdDebounceInput message x =
+    Cmd.ofSub (fun dispatch ->
+        inputSubject
+        |> Subject.onNext x
+        |> ignore
+
+        inputDebouncer
+        |> Observable.take 1
+        |> Observable.map DebounceEnd
+        |> Observable.map message
+        |> Observable.subscribe dispatch
+        |> ignore)
 
 let init storage repo =
     let model = { Page = HomePage; State = NotLoaded }
@@ -38,8 +58,11 @@ let update storage repo message model =
         
     | StartGameSession, _ ->
         { model with Page = StartPage; State = AddingSessionName "" }, Cmd.none
+        
+    | InputSessionName (DebounceStart name), _ ->
+        model, name |> cmdDebounceInput InputSessionName
 
-    | InputSessionName name, _ ->
+    | InputSessionName (DebounceEnd name), _ ->
         { model with State = AddingSessionName name }, Cmd.none
 
     | SaveSessionName, AddingSessionName name ->

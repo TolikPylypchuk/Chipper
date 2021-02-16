@@ -42,7 +42,7 @@ let startPage isValid dispatch =
                     attr.type' "text"
                     attr.class' "form-control"
                     attr.aria.describedby "session-name-help"
-                    on.input (fun e -> dispatch (e.Value.ToString() |> InputSessionName))
+                    on.input (fun e -> dispatch (e.Value.ToString() |> DebounceStart |> InputSessionName))
                 ]
 
                 div [ attr.id "session-name-help"; attr.class' "form-text" ] [

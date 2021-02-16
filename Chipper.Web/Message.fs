@@ -1,14 +1,17 @@
 namespace Chipper.Web
 
 open Chipper.Core
-open Chipper.Core.Domain
+
+type Debounced<'a> =
+    | DebounceStart of 'a
+    | DebounceEnd of 'a
 
 type Message =
     | SetPage of Page
     | SetInitialState of LocalState
     | SetModel of Model
     | StartGameSession
-    | InputSessionName of string
+    | InputSessionName of Debounced<string>
     | SaveSessionName
     | ConfigureGameSession
     | SetError of ChipperError
