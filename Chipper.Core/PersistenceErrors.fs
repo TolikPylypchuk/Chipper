@@ -2,11 +2,6 @@ namespace Chipper.Core
 
 open Domain
 
-type PersistentGameSession =
-    | NewSession of NewGameSession
-    | ConfigurableSession of GameSessionConfig
-    | PersistentSession of GameSession
-
 type GetSessionError =
     | SessionNotFound of GameSessionId
     | GenericGetError of exn

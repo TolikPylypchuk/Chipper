@@ -101,6 +101,44 @@ let invitePage js joinUrl dispatch =
             ]
         ]
     ]
+    
+let joinPage sessionName newPlayer dispatch =
+    let isValid = match newPlayer with Ok _ -> true | _ -> false
+
+    div [ attr.class' "h-100 d-flex align-items-center" ] [
+        div [ attr.class' "container" ] [
+            h2 [ attr.class' "display-4 m-lg-4 m-md-3 m-2 text-center" ] [
+                text <| "Join " + sessionName
+            ]
+
+            div [ attr.class' "m-4" ] [
+                input [
+                    attr.type' "text"
+                    attr.class' "form-control"
+                    attr.placeholder "Your Name"
+                    on.input (fun e -> dispatch (e.Value.ToString() |> DebounceStart |> InputPlayerName))
+                ]
+            ]
+
+            div [ attr.class' "text-center m-4" ] [
+                button [
+                    attr.type' "button"
+                    attr.class' "btn btn-primary btn-lg"
+                    if not isValid then attr.disabled ""
+                    on.click (fun _ -> match newPlayer with Ok player -> dispatch <| RequestAccess player | _ -> ())
+                ] [
+                    text "Request Access"
+                ]
+            ]
+        ]
+    ]
+
+let invalidJoinPage =
+    div [ attr.class' "h-100 d-flex align-items-center justify-content-center" ] [
+        h1 [ attr.class' "display-1" ] [
+            text "The game you're trying to join wasn't found :("
+        ]
+    ]
 
 let notImplementedPage =
     div [ attr.class' "h-100 d-flex align-items-center justify-content-center" ] [

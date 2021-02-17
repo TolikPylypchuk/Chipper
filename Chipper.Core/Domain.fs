@@ -17,8 +17,10 @@ type Move =
     | Raise of Bet
     | Fold
 
-type Player = private {
-    Name : string
+type PlayerName = private PlayerName of string
+
+type Player = {
+    Name : PlayerName
     Chips : Chip list
 }
 
@@ -95,16 +97,17 @@ module BetAmount =
     let value (BetAmount amount) = amount
 
 [<RequireQualifiedAccess>]
-module Player =
+module PlayerName =
 
     let create name =
         if (not <| String.IsNullOrEmpty(name)) && name.Length <= 50
-        then { Name = name; Chips = [] } |> Ok
+        then PlayerName name |> Ok
         else InvalidPlayerName name |> Error
 
-    let name player = player.Name
+    let value (PlayerName name) = name
 
-    let chips player = player.Chips
+[<RequireQualifiedAccess>]
+module Player =
 
     let chipCounts player = player.Chips |> List.countBy id
     
@@ -149,3 +152,7 @@ module Patterns =
     let (|Chip|) (Chip chip) = chip
     
     let (|BetAmount|) (BetAmount amount) = amount
+    
+    let (|GameSessionName|) (GameSessionName name) = name
+
+    let (|PlayerName|) (PlayerName name) = name

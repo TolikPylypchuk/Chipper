@@ -1,6 +1,7 @@
 namespace Chipper.Web
 
 open Chipper.Core
+open Chipper.Core.Domain
 
 type Debounced<'a> =
     | DebounceStart of 'a
@@ -13,6 +14,8 @@ type Message =
     | StartGameSession
     | InputSessionName of Debounced<string>
     | SaveSessionName
+    | InputPlayerName of Debounced<string>
+    | RequestAccess of PlayerJoinInfo
     | ConfigureGameSession
     | SetError of ChipperError
     | SetException of exn

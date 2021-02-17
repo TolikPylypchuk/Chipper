@@ -14,7 +14,7 @@ let chip = Chip.create >> Result.mapError ChipError >> asDomainError
 
 let betAmount = BetAmount.create >> Result.mapError BetAmountError >> asDomainError
 
-let player = Player.create >> Result.mapError PlayerError >> asDomainError
+let playerName = PlayerName.create >> Result.mapError PlayerNameError >> asDomainError
 
 let gameSessionName = GameSessionName.create >> Result.mapError GameSessionNameError >> asDomainError
 

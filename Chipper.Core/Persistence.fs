@@ -2,6 +2,11 @@ module Chipper.Core.Persistence
 
 open Domain
 
+type PersistentGameSession =
+    | NewSession of NewGameSession
+    | ConfigurableSession of GameSessionConfig
+    | PersistentSession of GameSession
+
 type GetSession = GameSessionId -> Async<Result<PersistentGameSession, PersistenceError>>
 
 type CreateSession = GameSessionName -> Async<Result<NewGameSession, PersistenceError>>
@@ -19,6 +24,7 @@ type GameSessionRepository = {
 
 [<RequireQualifiedAccess>]
 module PersistentGameSession =
+
     let id =
         function
         | NewSession session -> session.Id

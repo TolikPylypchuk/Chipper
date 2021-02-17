@@ -14,12 +14,24 @@ type Page =
     | PlayPage
     | NotImplementedPage
 
+type JoiningPlayer = {
+    GameSessionId : GameSessionId
+    GameSessionName : GameSessionName
+    Name : string
+}
+
+type PlayerJoinInfo = {
+    GameSessionId : GameSessionId
+    PlayerName : PlayerName
+}
+
 type LocalState =
     | NotLoaded
     | NoState
     | AddingSessionName of string
     | StartingSession of NewGameSession
-    | JoiningSession of GameSessionId
+    | JoiningSession of JoiningPlayer
+    | JoiningInvalidSession
     | ConfiguringSession of GameSessionId
 
 type Model = {
@@ -29,7 +41,10 @@ type Model = {
 
 module Model =
 
-    let canSaveName name =
+    let canSaveSessionName name =
         match name |> gameSessionName with
         | Ok _ -> true
         | _ -> false
+
+    let tryCreateJoinInfo { GameSessionId = id; Name = name } =
+        name |> playerName |> Result.map (fun playerName -> { GameSessionId = id; PlayerName = playerName })
