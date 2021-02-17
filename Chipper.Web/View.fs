@@ -10,28 +10,30 @@ module attr =
         let describedby value = attr.aria "describedby" value
 
 let homePage dispatch =
-    concat [
-        h1 [ attr.class' "display-1 m-lg-4 m-md-3 m-2 text-center" ] [
-            text "Chipper"
-        ]
+    div [ attr.class' "h-100 d-flex align-items-center" ] [
+        div [ attr.class' "container" ] [
+            h1 [ attr.class' "display-1 m-lg-4 m-md-3 m-2 text-center" ] [
+                text "Chipper"
+            ]
 
-        p [ attr.class' "lead m-2 text-center" ] [
-            text "Cards are on you. Chips are on me."
-        ]
+            p [ attr.class' "lead m-2 text-center" ] [
+                text "Cards are on you. Chips are on me."
+            ]
 
-        div [ attr.class' "text-center m-4" ] [
-            button [
-                attr.type' "button"
-                attr.class' "btn btn-primary btn-lg"
-                on.click (fun _ -> dispatch StartGameSession)
-            ] [
-                text "Start playing"
+            div [ attr.class' "text-center m-4" ] [
+                button [
+                    attr.type' "button"
+                    attr.class' "btn btn-primary btn-lg"
+                    on.click (fun _ -> dispatch StartGameSession)
+                ] [
+                    text "Start playing"
+                ]
             ]
         ]
     ]
 
 let startPage isValid dispatch =
-    concat [
+    div [ attr.class' "h-100 d-flex align-items-center" ] [
         div [ attr.class' "container" ] [
             h2 [ attr.class' "display-4 m-lg-4 m-md-3 m-2 text-center" ] [
                 text "Describe Your Poker Game"
@@ -63,8 +65,8 @@ let startPage isValid dispatch =
         ]
     ]
 
-let invitePage joinUrl dispatch =
-    concat [
+let invitePage js joinUrl dispatch =
+    div [ attr.class' "h-100 d-flex align-items-center" ] [
         div [ attr.class' "container" ] [
             h2 [ attr.class' "display-4 m-lg-4 m-md-3 m-2 text-center" ] [
                 text "Share the link"
@@ -80,10 +82,18 @@ let invitePage joinUrl dispatch =
                 ]
             ]
 
-            div [ attr.class' "text-center m-4" ] [
+            div [ attr.class' "d-flex flex-row justify-content-center m-2" ] [
                 button [
                     attr.type' "button"
-                    attr.class' "btn btn-primary btn-lg"
+                    attr.class' "btn btn-light btn-lg m-2"
+                    on.task.click (fun _ -> js |> writeTextToClipboard joinUrl)
+                ] [
+                    text "Copy the link"
+                ]
+
+                button [
+                    attr.type' "button"
+                    attr.class' "btn btn-primary btn-lg m-2"
                     on.click (fun _ -> dispatch ConfigureGameSession)
                 ] [
                     text "Configure the game"
@@ -93,10 +103,8 @@ let invitePage joinUrl dispatch =
     ]
 
 let notImplementedPage =
-    div [ attr.class' "position-relative vw-100 vh-100" ] [
-        div [ attr.class' "container position-absolute top-50 start-50 translate-middle" ] [
-            h1 [ attr.class' "display-1 text-center" ] [
-                text "Hang tight, this one's not implemented yet"
-            ]
+    div [ attr.class' "h-100 d-flex align-items-center justify-content-center" ] [
+        h1 [ attr.class' "display-1" ] [
+            text "Hang tight, this one's not implemented yet"
         ]
     ]

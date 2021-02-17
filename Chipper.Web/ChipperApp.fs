@@ -2,6 +2,7 @@ module Chipper.Web.ChipperApp
 
 open System
 open Microsoft.Extensions.DependencyInjection
+open Microsoft.JSInterop
 
 open FSharp.Control.Reactive
 
@@ -74,12 +75,12 @@ let update storage repo message model =
     | ConfigureGameSession, _ ->
         doNothing
 
-let view createJoinUrl model dispatch =
+let view js createJoinUrl model dispatch =
     match model.Page, model.State with
     | _, NotLoaded -> Empty
     | HomePage, _ -> View.homePage dispatch
     | StartPage, AddingSessionName name -> View.startPage (name |> Model.canSaveName) dispatch
-    | InvitePage, StartingSession newSession -> View.invitePage (createJoinUrl newSession.Id) dispatch
+    | InvitePage, StartingSession newSession -> View.invitePage js (createJoinUrl newSession.Id) dispatch
     | _ -> View.notImplementedPage
 
 type AppComponent() =
@@ -89,12 +90,13 @@ type AppComponent() =
         let settings = this.Services.GetRequiredService<AppSettings>()
         let repo = this.Services.GetRequiredService<GameSessionRepository>()
         let storage = this.Services.GetRequiredService<LocalStorage>()
+        let js = this.Services.GetRequiredService<IJSRuntime>()
 
         let createJoinUrl = fun (GameSessionId id) -> Url.Combine(settings.UrlRoot, (router.Link <| JoinPage id))
 
         let init _ = init storage repo
         let update = update storage repo
-        let view = view createJoinUrl
+        let view = view js createJoinUrl
 
         Program.mkProgram init update view
         |> Program.withRouter router
