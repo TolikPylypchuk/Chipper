@@ -37,9 +37,12 @@ type Model = {
     Page : Page
     State : LocalState
     LocalState : LocalState option
+    IsLoaded : bool
 }
 
 module Model =
+
+    let simple page state = { Page = page; State = state; LocalState = None; IsLoaded = true }
 
     let canSaveSessionName name =
         match name |> gameSessionName with

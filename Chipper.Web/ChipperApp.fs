@@ -2,7 +2,6 @@ module Chipper.Web.ChipperApp
 
 open System
 open Microsoft.Extensions.DependencyInjection
-open Microsoft.JSInterop
 
 open FSharp.Control.Reactive
 
@@ -32,7 +31,7 @@ let cmdDebounceInput message x =
         |> ignore)
 
 let init storage repo =
-    let model = { Page = HomePage; State = NoState; LocalState = None }
+    let model = { Page = HomePage; State = NoState; LocalState = None; IsLoaded = false }
     let cmd = Cmd.OfAsync.perform (fun () -> getState storage repo) () LoadLocalState
 
     model, cmd
@@ -49,12 +48,11 @@ let update storage repo message model =
     | SetPage (JoinPage id as page), _ ->
         { model with Page = page }, Cmd.OfAsync.result (repo |> getSessionToJoin id)
 
-    | SetPage page, _ -> { model with Page = page }, Cmd.none
-
-    | LoadLocalState NoState, _ -> doNothing
+    | SetPage page, _ ->
+        { model with Page = page }, Cmd.none
 
     | LoadLocalState state, _ ->
-        { model with LocalState = Some state }, Cmd.none
+        loadState model state
         
     | RecoverLocalState, _ ->
         let newModel = { model with LocalState = None }
@@ -63,11 +61,15 @@ let update storage repo message model =
             { model with Page = InvitePage; State = state; LocalState = None }, Cmd.none
         | _ -> newModel, Cmd.none
         
+    | IgnoreLocalState, _ ->
+        { model with LocalState = None }, Cmd.none
+
     | ClearLocalState, _ ->
         Async.StartImmediate <| storage.ClearState ()
         { model with LocalState = None }, Cmd.none
 
-    | SetModel model, _ -> model, Cmd.none
+    | SetModel model, _ ->
+        model, Cmd.none
 
     | StartGameSession, _ ->
         { model with Page = StartPage; State = AddingSessionName "" }, Cmd.none
@@ -101,13 +103,25 @@ let update storage repo message model =
         doNothing
 
 let view js createJoinUrl model dispatch =
-    match model.Page, model.State with
-    | HomePage, _ -> View.homePage model dispatch
-    | StartPage, AddingSessionName name -> View.startPage (name |> Model.canSaveSessionName) model dispatch
-    | InvitePage, StartingSession newSession -> View.invitePage js (createJoinUrl newSession.Id) model dispatch
-    | JoinPage _, JoiningSession ({ GameSessionName = (GameSessionName name) } as player) ->
+    match model with
+    | { IsLoaded = false } ->
+        Empty
+
+    | { Page = HomePage } ->
+        View.homePage model dispatch
+
+    | { Page = StartPage; State = AddingSessionName name } ->
+        View.startPage (name |> Model.canSaveSessionName) model dispatch
+
+    | { Page = InvitePage; State = StartingSession newSession } ->
+        View.invitePage js (createJoinUrl newSession.Id) model dispatch
+
+    | { Page = JoinPage _; State = JoiningSession ({ GameSessionName = (GameSessionName name) } as player) } ->
         View.joinPage name (player |> Model.tryCreateJoinInfo) model dispatch
-    | JoinPage _, JoiningInvalidSession -> View.invalidJoinPage model dispatch
+
+    | { Page = JoinPage _; State = JoiningInvalidSession } ->
+        View.invalidJoinPage model dispatch
+
     | _ -> View.notImplementedPage
 
 type AppComponent() =

@@ -2,6 +2,8 @@ module Chipper.Web.Workflows
 
 open FsToolkit.ErrorHandling
 
+open Elmish
+
 open Chipper.Core
 open Chipper.Core.Domain
 open Chipper.Core.Persistence
@@ -26,6 +28,19 @@ let getState storage repo = async {
         do! storage.ClearState ()
         return NoState
 }
+
+let loadState model state =
+    match model.Page, state with
+    | InvitePage, (StartingSession _ as state) ->
+        { model with State = state; LocalState = None; IsLoaded = true }, Cmd.none
+    | JoinPage _, NoState ->
+        { model with LocalState = None; IsLoaded = true }, Cmd.none
+    | JoinPage _, state ->
+        { model with LocalState = Some state; IsLoaded = true }, Cmd.none
+    | _, NoState ->
+        { model with Page = HomePage; LocalState = None; IsLoaded = true }, Cmd.none
+    | _ ->
+        { model with Page = HomePage; LocalState = Some state; IsLoaded = true }, Cmd.none
 
 let startNewSession storage repo model name =
     let result = asyncResult {
@@ -54,7 +69,7 @@ let getSessionToJoin id repo =
         }
 
         let state = JoiningSession { GameSessionId = id; GameSessionName = name; Name = "" }
-        return { Page = page; State = state; LocalState = None }
+        return Model.simple page state
     }
 
     let asMessage =
@@ -62,7 +77,7 @@ let getSessionToJoin id repo =
         | Ok result ->
             SetModel result
         | Error (PersistenceError (GetSessionError (SessionNotFound _))) ->
-            SetModel { Page = page; State = JoiningInvalidSession; LocalState = None }
+            SetModel <| Model.simple page JoiningInvalidSession
         | Error e ->
             SetError e
 

@@ -38,6 +38,7 @@ type LocalStateToast () =
                         attr.class' "btn-close"
                         attr.bs "dismiss" "toast"
                         attr.aria "label" "Close"
+                        on.click (fun _ -> dispatch IgnoreLocalState)
                     ] []
                 ]
 

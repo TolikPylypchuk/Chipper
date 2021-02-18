@@ -11,6 +11,7 @@ type Message =
     | SetPage of Page
     | LoadLocalState of LocalState
     | RecoverLocalState
+    | IgnoreLocalState
     | ClearLocalState
     | SetModel of Model
     | StartGameSession
