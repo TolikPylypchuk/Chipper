@@ -54,7 +54,7 @@ let getSessionToJoin id repo =
         }
 
         let state = JoiningSession { GameSessionId = id; GameSessionName = name; Name = "" }
-        return { Page = page; State = state }
+        return { Page = page; State = state; LocalState = None }
     }
 
     let asMessage =
@@ -62,7 +62,7 @@ let getSessionToJoin id repo =
         | Ok result ->
             SetModel result
         | Error (PersistenceError (GetSessionError (SessionNotFound _))) ->
-            SetModel { Page = page; State = JoiningInvalidSession }
+            SetModel { Page = page; State = JoiningInvalidSession; LocalState = None }
         | Error e ->
             SetError e
 

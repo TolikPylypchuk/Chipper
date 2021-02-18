@@ -11,8 +11,6 @@ let (|Guid|_|) (id : string) =
     | true, result -> Some result
     | _ -> None
 
-type CreateJoinUrl = GameSessionId -> string
-
 let router = {
     getEndPoint = fun model -> model.Page
     setRoute = fun path ->

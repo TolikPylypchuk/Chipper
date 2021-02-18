@@ -26,7 +26,6 @@ type PlayerJoinInfo = {
 }
 
 type LocalState =
-    | NotLoaded
     | NoState
     | AddingSessionName of string
     | StartingSession of NewGameSession
@@ -37,6 +36,7 @@ type LocalState =
 type Model = {
     Page : Page
     State : LocalState
+    LocalState : LocalState option
 }
 
 module Model =

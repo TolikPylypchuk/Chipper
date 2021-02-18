@@ -32,8 +32,8 @@ let cmdDebounceInput message x =
         |> ignore)
 
 let init storage repo =
-    let model = { Page = HomePage; State = NotLoaded }
-    let cmd = Cmd.OfAsync.either (fun () -> getState storage repo) () SetInitialState SetException
+    let model = { Page = HomePage; State = NoState; LocalState = None }
+    let cmd = Cmd.OfAsync.perform (fun () -> getState storage repo) () LoadLocalState
 
     model, cmd
 
@@ -46,27 +46,32 @@ let update storage repo message model =
         printfn "An unhandled error appeared: %O" e
         doNothing
 
-    | SetException e, _ ->
-        printfn "%O" e.Message
-        doNothing
-
-    | SetInitialState state, _ when model.State = NotLoaded ->
-        { model with State = state }, Cmd.none
-    
-    | SetInitialState _, _ -> doNothing
-    
     | SetPage (JoinPage id as page), _ ->
         { model with Page = page }, Cmd.OfAsync.result (repo |> getSessionToJoin id)
 
     | SetPage page, _ -> { model with Page = page }, Cmd.none
 
-    | SetModel model, _ -> model, Cmd.none
+    | LoadLocalState NoState, _ -> doNothing
 
-    | _, NotLoaded -> doNothing
+    | LoadLocalState state, _ ->
+        { model with LocalState = Some state }, Cmd.none
+        
+    | RecoverLocalState, _ ->
+        let newModel = { model with LocalState = None }
+        match model.LocalState with
+        | Some (StartingSession _ as state) ->
+            { model with Page = InvitePage; State = state; LocalState = None }, Cmd.none
+        | _ -> newModel, Cmd.none
+        
+    | ClearLocalState, _ ->
+        Async.StartImmediate <| storage.ClearState ()
+        { model with LocalState = None }, Cmd.none
+
+    | SetModel model, _ -> model, Cmd.none
 
     | StartGameSession, _ ->
         { model with Page = StartPage; State = AddingSessionName "" }, Cmd.none
-        
+
     | InputSessionName (DebounceStart name), _ ->
         model, name |> cmdDebounceInput InputSessionName
 
@@ -75,17 +80,17 @@ let update storage repo message model =
 
     | SaveSessionName, AddingSessionName name ->
         model, Cmd.OfAsync.result <| startNewSession storage repo model name
-        
+
     | InputPlayerName (DebounceStart name), _ ->
         model, name |> cmdDebounceInput InputPlayerName
 
     | InputPlayerName (DebounceEnd name), JoiningSession { GameSessionId = id; GameSessionName = sessionName } ->
         let state = JoiningSession { GameSessionId = id; GameSessionName = sessionName; Name = name }
         { model with State = state }, Cmd.none
-        
+
     | InputPlayerName _, _ ->
         doNothing
-        
+
     | RequestAccess _, _ ->
         doNothing
 
@@ -97,13 +102,12 @@ let update storage repo message model =
 
 let view js createJoinUrl model dispatch =
     match model.Page, model.State with
-    | _, NotLoaded -> Empty
-    | HomePage, _ -> View.homePage dispatch
-    | StartPage, AddingSessionName name -> View.startPage (name |> Model.canSaveSessionName) dispatch
-    | InvitePage, StartingSession newSession -> View.invitePage js (createJoinUrl newSession.Id) dispatch
+    | HomePage, _ -> View.homePage model dispatch
+    | StartPage, AddingSessionName name -> View.startPage (name |> Model.canSaveSessionName) model dispatch
+    | InvitePage, StartingSession newSession -> View.invitePage js (createJoinUrl newSession.Id) model dispatch
     | JoinPage _, JoiningSession ({ GameSessionName = (GameSessionName name) } as player) ->
-        View.joinPage name (player |> Model.tryCreateJoinInfo) dispatch
-    | JoinPage _, JoiningInvalidSession -> View.invalidJoinPage
+        View.joinPage name (player |> Model.tryCreateJoinInfo) model dispatch
+    | JoinPage _, JoiningInvalidSession -> View.invalidJoinPage model dispatch
     | _ -> View.notImplementedPage
 
 type AppComponent() =
@@ -113,13 +117,12 @@ type AppComponent() =
         let settings = this.Services.GetRequiredService<AppSettings>()
         let repo = this.Services.GetRequiredService<GameSessionRepository>()
         let storage = this.Services.GetRequiredService<LocalStorage>()
-        let js = this.Services.GetRequiredService<IJSRuntime>()
 
         let createJoinUrl = fun (GameSessionId id) -> Url.Combine(settings.UrlRoot, (router.Link <| JoinPage id))
 
         let init _ = init storage repo
         let update = update storage repo
-        let view = view js createJoinUrl
+        let view = view this.JSRuntime createJoinUrl
 
         Program.mkProgram init update view
         |> Program.withRouter router

@@ -9,7 +9,9 @@ type Debounced<'a> =
 
 type Message =
     | SetPage of Page
-    | SetInitialState of LocalState
+    | LoadLocalState of LocalState
+    | RecoverLocalState
+    | ClearLocalState
     | SetModel of Model
     | StartGameSession
     | InputSessionName of Debounced<string>
@@ -18,7 +20,6 @@ type Message =
     | RequestAccess of PlayerJoinInfo
     | ConfigureGameSession
     | SetError of ChipperError
-    | SetException of exn
 
 [<AutoOpen>]
 module MessageUtil =

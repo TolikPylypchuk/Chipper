@@ -10,6 +10,7 @@
     <Compile Include="Model.fs" />
     <Compile Include="Message.fs" />
     <Compile Include="AppRouter.fs" />
+    <Compile Include="LocalStateToast.fs" />
     <Compile Include="View.fs" />
     <Compile Include="LocalStorage.fs" />
     <Compile Include="Workflows.fs" />
