@@ -41,11 +41,21 @@ let startPage isValid model dispatch =
                 h2 [ attr.class' "display-4 m-lg-4 m-md-3 m-2 text-center" ] [
                     text "Describe Your Poker Game"
                 ]
+                
+                div [ attr.class' "m-4" ] [
+                    input [
+                        attr.type' "text"
+                        attr.class' "form-control"
+                        attr.placeholder "Your Name"
+                        on.input (fun e -> e.Value.ToString() |> DebounceStart |> InputPlayerName |> dispatch)
+                    ]
+                ]
 
                 div [ attr.class' "m-4" ] [
                     input [
                         attr.type' "text"
                         attr.class' "form-control"
+                        attr.placeholder "Game Name"
                         attr.aria "describedby" "session-name-help"
                         on.input (fun e -> e.Value.ToString() |> DebounceStart |> InputSessionName |> dispatch)
                     ]

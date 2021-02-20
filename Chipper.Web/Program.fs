@@ -43,9 +43,9 @@ let inMemoryRepository () =
                 | _ -> id |> SessionNotFound |> GetSessionError |> Error
         }
 
-        CreateSession = fun name -> async {
+        CreateSession = fun name playerName -> async {
             let id = Guid.NewGuid() |> GameSessionId
-            let session = { Id = id; Name = name; Date = DateTime.Now }
+            let session = { Id = id; Name = name; PlayerName = playerName; Date = DateTime.Now }
             storage.Add(id, NewSession session)
             return Ok session
         }

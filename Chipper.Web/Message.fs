@@ -1,7 +1,6 @@
 namespace Chipper.Web
 
 open Chipper.Core
-open Chipper.Core.Domain
 
 type Debounced<'a> =
     | DebounceStart of 'a

@@ -37,13 +37,11 @@ let init storage repo =
     model, cmd
 
 let update storage repo message model =
-    let doNothing = model, Cmd.none
-
     match message, model.State with
 
     | SetError e, _ ->
         printfn "An unhandled error appeared: %O" e
-        doNothing
+        model, Cmd.none
 
     | SetPage (JoinPage id as page), _ ->
         { model with Page = page }, Cmd.OfAsync.result (repo |> getSessionToJoin id)
@@ -72,35 +70,29 @@ let update storage repo message model =
         model, Cmd.none
 
     | StartGameSession, _ ->
-        { model with Page = StartPage; State = AddingSessionName "" }, Cmd.none
+        { model with Page = StartPage; State = AddingSessionName ("", "") }, Cmd.none
 
     | InputSessionName (DebounceStart name), _ ->
         model, name |> cmdDebounceInput InputSessionName
-
-    | InputSessionName (DebounceEnd name), _ ->
-        { model with State = AddingSessionName name }, Cmd.none
-
-    | SaveSessionName, AddingSessionName name ->
-        model, Cmd.OfAsync.result <| startNewSession storage repo model name
-
+        
+    | InputSessionName (DebounceEnd name), AddingSessionName (_, playerName) ->
+        { model with State = AddingSessionName (name, playerName) }, Cmd.none
+        
     | InputPlayerName (DebounceStart name), _ ->
         model, name |> cmdDebounceInput InputPlayerName
+        
+    | InputPlayerName (DebounceEnd playerName), AddingSessionName (name, _) ->
+        { model with State = AddingSessionName (name, playerName) }, Cmd.none
+            
+    | SaveSessionName, AddingSessionName (name, playerName) ->
+        model, Cmd.OfAsync.result <| startNewSession storage repo model name playerName
 
     | InputPlayerName (DebounceEnd name), JoiningSession { GameSessionId = id; GameSessionName = sessionName } ->
         let state = JoiningSession { GameSessionId = id; GameSessionName = sessionName; Name = name }
         { model with State = state }, Cmd.none
 
-    | InputPlayerName _, _ ->
-        doNothing
-
-    | RequestAccess _, _ ->
-        doNothing
-
-    | SaveSessionName, _ ->
-        doNothing
-
-    | ConfigureGameSession, _ ->
-        doNothing
+    | _ ->
+        model, Cmd.none
 
 let view js createJoinUrl model dispatch =
     match model with
@@ -110,8 +102,9 @@ let view js createJoinUrl model dispatch =
     | { Page = HomePage } ->
         View.homePage model dispatch
 
-    | { Page = StartPage; State = AddingSessionName name } ->
-        View.startPage (name |> Model.canSaveSessionName) model dispatch
+    | { Page = StartPage; State = AddingSessionName (name, playerName) } ->
+        let isValid = Model.canSaveSessionName name && Model.canSavePlayerName playerName
+        View.startPage isValid model dispatch
 
     | { Page = InvitePage; State = StartingSession newSession } ->
         View.invitePage js (createJoinUrl newSession.Id) model dispatch

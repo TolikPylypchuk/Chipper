@@ -22,7 +22,7 @@ let gameSession = GameSession.fromConfig >> Result.mapError GameSessionError >> 
 
 let getSession id repo = repo.GetSession id |> Async.map asPersistenceError
 
-let createSession name repo = repo.CreateSession name |> Async.map asPersistenceError
+let createSession name playerName repo = repo.CreateSession name playerName |> Async.map asPersistenceError
 
 let updateSession session repo = repo.UpdateSession session |> Async.map asPersistenceError
 

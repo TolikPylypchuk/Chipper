@@ -9,7 +9,7 @@ type PersistentGameSession =
 
 type GetSession = GameSessionId -> Async<Result<PersistentGameSession, PersistenceError>>
 
-type CreateSession = GameSessionName -> Async<Result<NewGameSession, PersistenceError>>
+type CreateSession = GameSessionName -> PlayerName -> Async<Result<NewGameSession, PersistenceError>>
 
 type UpdateSession = PersistentGameSession -> Async<Result<unit, PersistenceError>>
 

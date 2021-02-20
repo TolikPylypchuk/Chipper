@@ -27,7 +27,7 @@ type PlayerJoinInfo = {
 
 type LocalState =
     | NoState
-    | AddingSessionName of string
+    | AddingSessionName of string * string
     | StartingSession of NewGameSession
     | JoiningSession of JoiningPlayer
     | JoiningInvalidSession
@@ -46,6 +46,11 @@ module Model =
 
     let canSaveSessionName name =
         match name |> gameSessionName with
+        | Ok _ -> true
+        | _ -> false
+        
+    let canSavePlayerName name =
+        match name |> playerName with
         | Ok _ -> true
         | _ -> false
 

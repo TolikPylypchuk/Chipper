@@ -59,6 +59,7 @@ type GameSessionName = private GameSessionName of string
 type NewGameSession = {
     Id : GameSessionId
     Name : GameSessionName
+    PlayerName : PlayerName
     Date : DateTime
 }
 

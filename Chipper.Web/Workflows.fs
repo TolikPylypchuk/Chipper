@@ -42,10 +42,11 @@ let loadState model state =
     | _ ->
         { model with Page = HomePage; LocalState = Some state; IsLoaded = true }, Cmd.none
 
-let startNewSession storage repo model name =
+let startNewSession storage repo model name playerName' =
     let result = asyncResult {
         let! name = gameSessionName name
-        let! newSession = repo |> createSession name
+        let! playerName' = playerName playerName'
+        let! newSession = repo |> createSession name playerName'
 
         let state = StartingSession newSession
         do! storage.SetState state
