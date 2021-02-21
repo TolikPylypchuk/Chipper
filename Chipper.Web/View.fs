@@ -2,6 +2,8 @@ module Chipper.Web.View
 
 open Bolero.Html
 
+open Chipper.Core.Domain
+
 let stateToast dispatch model =
     match model.LocalState with
     | Some state -> ecomp<LocalStateToast, _, _> [] state dispatch
@@ -167,7 +169,78 @@ let invalidJoinPage model dispatch =
 
         model |> stateToast dispatch
     ]
+    
+let configurePage config dispatch =
+    concat [
+        div [ attr.class' "container" ] [
+            h1 [ attr.class' "display-1 p-lg-4 p-md-3 p-2 text-center" ] [
+                text "Configure the Game"
+            ]
 
+            div [ attr.class' "row justify-content-md-center" ] [
+                section [ attr.class' "col-md-auto m-2 m-md-4" ] [
+                    h6 [] [
+                        text <| "Betting Type"
+                    ]
+
+                    forEach [ Blinds; Antes ] <| fun betType ->
+                        let inputId = sprintf "bet-%O" betType
+                        div [ attr.class' "form-check" ] [
+                            input [
+                                attr.id <| inputId
+                                attr.name "bet"
+                                attr.type' "radio"
+                                attr.class' "form-check-input"
+                                attr.checked' (config.BettingType = betType)
+                                bind.change.string (string betType) (fun _ -> dispatch <| SetBettingType betType)
+                            ]
+
+                            label [ attr.for' inputId; attr.class' "form-check-label" ] [
+                                text <| match betType with Blinds -> "Blinds" | Antes -> "Antes"
+                            ]
+                        ]
+                ]
+                
+                section [ attr.class' "col-md-auto m-2 m-md-4" ] [
+                    h6 [] [
+                        text <| "Raise Type"
+                    ]
+
+                    forEach [ NoLimit; Limit; PotLimit ] <| fun raiseType ->
+                        let inputId = sprintf "raise-%O" raiseType
+                        div [ attr.class' "form-check" ] [
+                            input [
+                                attr.id <| inputId
+                                attr.name "raise"
+                                attr.type' "radio"
+                                attr.class' "form-check-input"
+                                attr.checked' (config.RaiseType = raiseType)
+                                bind.change.string (string raiseType) (fun _ -> dispatch <| SetRaiseType raiseType)
+                            ]
+
+                            label [ attr.for' inputId; attr.class' "form-check-label" ] [
+                                match raiseType with
+                                | Limit -> "Limited"
+                                | NoLimit -> "Unlimited"
+                                | PotLimit -> "Pot-limited"
+                                |> text
+                            ]
+                        ]
+                ]
+            ]
+
+            div [ attr.class' "text-center m-4" ] [
+                button [
+                    attr.type' "button"
+                    attr.class' "btn btn-primary btn-lg"
+                    attr.disabled true
+                ] [
+                    text "Start the game"
+                ]
+            ]
+        ]
+    ]
+    
 let notImplementedPage =
     div [ attr.class' "h-100 d-flex align-items-center justify-content-center" ] [
         h1 [ attr.class' "display-1 text-center" ] [

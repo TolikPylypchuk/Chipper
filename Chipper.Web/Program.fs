@@ -50,7 +50,7 @@ let inMemoryRepository () =
             return Ok session
         }
 
-        UpdateSession = fun session -> async { return storage.Add(session |> PersistentGameSession.id, session) |> Ok }
+        UpdateSession = fun session -> async { return (storage.[session |> PersistentGameSession.id] <- session) |> Ok }
 
         DeleteSession = fun id -> async { return storage.Remove(id) |> ignore |> Ok }
     }

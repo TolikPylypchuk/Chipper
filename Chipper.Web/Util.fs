@@ -15,8 +15,10 @@ let writeTextToClipboard (text : string) (js : IJSRuntime) =
 module attr =
 
     open Bolero.Html
-
-    let class' = attr.``class``
-    let type' = attr.``type``
-    let role value = "role" => value
+    
     let bs a value = ("data-bs-" + a) => value
+    let checked' = attr.``checked``
+    let class' = attr.``class``
+    let for' = attr.``for``
+    let role value = "role" => value
+    let type' = attr.``type``

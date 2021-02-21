@@ -1,6 +1,7 @@
 namespace Chipper.Web
 
 open Chipper.Core
+open Chipper.Core.Domain
 
 type Debounced<'a> =
     | DebounceStart of 'a
@@ -19,6 +20,8 @@ type Message =
     | InputPlayerName of Debounced<string>
     | RequestAccess of PlayerJoinInfo
     | ConfigureGameSession
+    | SetBettingType of BettingType
+    | SetRaiseType of RaiseType
     | SetError of ChipperError
 
 [<AutoOpen>]

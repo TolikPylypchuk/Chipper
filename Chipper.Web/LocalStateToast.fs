@@ -48,6 +48,10 @@ type LocalStateToast () =
                         text <| sprintf
                             "It appears that you were previously creating a game: %s. Would you like to continue?"
                             sessionName
+                    | ConfiguringSession { Name = GameSessionName sessionName } ->
+                        text <| sprintf
+                            "It appears that you were previously configuring a game: %s. Would you like to continue?"
+                            sessionName
                     | _ ->
                         text "Uh, I got confused and showed you this message by mistake. Oops"
 

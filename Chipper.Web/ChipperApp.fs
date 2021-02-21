@@ -4,6 +4,7 @@ open System
 open Microsoft.Extensions.DependencyInjection
 
 open FSharp.Control.Reactive
+open FSharpx.Collections
 
 open Elmish
 open Flurl
@@ -51,14 +52,16 @@ let update storage repo message model =
 
     | LoadLocalState state, _ ->
         loadState model state
-        
+
     | RecoverLocalState, _ ->
         let newModel = { model with LocalState = None }
         match model.LocalState with
         | Some (StartingSession _ as state) ->
             { model with Page = InvitePage; State = state; LocalState = None }, Cmd.none
+        | Some (ConfiguringSession _ as state) ->
+            { model with Page = ConfigurePage; State = state; LocalState = None }, Cmd.none
         | _ -> newModel, Cmd.none
-        
+
     | IgnoreLocalState, _ ->
         { model with LocalState = None }, Cmd.none
 
@@ -74,22 +77,37 @@ let update storage repo message model =
 
     | InputSessionName (DebounceStart name), _ ->
         model, name |> cmdDebounceInput InputSessionName
-        
+
     | InputSessionName (DebounceEnd name), AddingSessionName (_, playerName) ->
         { model with State = AddingSessionName (name, playerName) }, Cmd.none
-        
+
     | InputPlayerName (DebounceStart name), _ ->
         model, name |> cmdDebounceInput InputPlayerName
-        
+
     | InputPlayerName (DebounceEnd playerName), AddingSessionName (name, _) ->
         { model with State = AddingSessionName (name, playerName) }, Cmd.none
-            
+
     | SaveSessionName, AddingSessionName (name, playerName) ->
         model, Cmd.OfAsync.result <| startNewSession storage repo model name playerName
 
     | InputPlayerName (DebounceEnd name), JoiningSession { GameSessionId = id; GameSessionName = sessionName } ->
         let state = JoiningSession { GameSessionId = id; GameSessionName = sessionName; Name = name }
         { model with State = state }, Cmd.none
+
+    | ConfigureGameSession, StartingSession newSession ->
+        let config = newSession |> GameSession.defaultConfig
+        model, Cmd.OfAsync.result <| configureSession storage repo model config
+        
+    | ConfigureGameSession, ConfiguringSession _ ->
+        { model with Page = ConfigurePage }, Cmd.none
+
+    | SetBettingType bettingType, ConfiguringSession config ->
+        let config = { config with BettingType = bettingType }
+        model, Cmd.OfAsync.result <| configureSession storage repo model config
+
+    | SetRaiseType raiseType, ConfiguringSession config ->
+        let config = { config with RaiseType = raiseType }
+        model, Cmd.OfAsync.result <| configureSession storage repo model config
 
     | _ ->
         model, Cmd.none
@@ -108,12 +126,18 @@ let view js createJoinUrl model dispatch =
 
     | { Page = InvitePage; State = StartingSession newSession } ->
         View.invitePage js (createJoinUrl newSession.Id) model dispatch
+        
+    | { Page = InvitePage; State = ConfiguringSession config } ->
+        View.invitePage js (createJoinUrl config.Id) model dispatch
 
     | { Page = JoinPage _; State = JoiningSession ({ GameSessionName = (GameSessionName name) } as player) } ->
         View.joinPage name (player |> Model.tryCreateJoinInfo) model dispatch
 
     | { Page = JoinPage _; State = JoiningInvalidSession } ->
         View.invalidJoinPage model dispatch
+
+    | { Page = ConfigurePage; State = ConfiguringSession config } ->
+        View.configurePage config dispatch
 
     | _ -> View.notImplementedPage
 

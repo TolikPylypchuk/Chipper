@@ -31,7 +31,7 @@ type LocalState =
     | StartingSession of NewGameSession
     | JoiningSession of JoiningPlayer
     | JoiningInvalidSession
-    | ConfiguringSession of GameSessionId
+    | ConfiguringSession of GameSessionConfig
 
 type Model = {
     Page : Page

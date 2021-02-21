@@ -16,7 +16,11 @@ let getState storage repo = async {
             match! repo |> getSession newSession.Id with
             | Ok (NewSession newSession) -> return StartingSession newSession |> Some
             | _ -> return None
-        | _ -> return localState |> Some
+        | ConfiguringSession config ->
+            match! repo |> getSession config.Id with
+            | Ok (ConfigurableSession config) -> return ConfiguringSession config |> Some
+            | _ -> return None
+        | _ -> return None
     }
 
     match currentState with
@@ -51,6 +55,16 @@ let startNewSession storage repo model name playerName' =
         let state = StartingSession newSession
         do! storage.SetState state
         return SetModel { model with Page = InvitePage; State = state }
+    }
+
+    result |> handleAsyncMessageError
+
+let configureSession storage repo model config =
+    let result = asyncResult {
+        do! repo |> updateSession (ConfigurableSession config)
+        let state = ConfiguringSession config
+        do! storage.SetState state
+        return SetModel { model with Page = ConfigurePage; State = state }
     }
 
     result |> handleAsyncMessageError

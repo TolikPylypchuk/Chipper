@@ -42,11 +42,11 @@ type BlindBets = {
 type AnteBet = AnteBet of BetAmount
 
 type BettingType =
-    | Blinds of BlindBets
-    | Ante of AnteBet
-    
+    | Blinds
+    | Antes
+
 type GameId = GameId of Guid
-    
+
 type Game = {
     Id : GameId
     Rounds : BettingRound list
@@ -133,6 +133,17 @@ module GameSessionName =
     
 [<RequireQualifiedAccess>]
 module GameSession =
+
+    let defaultConfig newSession =
+        let player = { Name = newSession.PlayerName; Chips = [] }
+        {
+            Id = newSession.Id
+            Name = newSession.Name
+            Date = newSession.Date
+            Players = NonEmptyList.create player []
+            RaiseType = NoLimit
+            BettingType = Blinds
+        }
 
     let fromConfig sessionConfig =
         let numPlayers = sessionConfig.Players |> NonEmptyList.length
