@@ -6,6 +6,11 @@ open FSharpPlus
 open Domain
 open Persistence
 
+type ChipperError =
+    | DomainError of DomainError
+    | PersistenceError of PersistenceError
+    | CustomError of string
+
 let asDomainError result = result |> Result.mapError DomainError
 
 let asPersistenceError result = result |> Result.mapError PersistenceError

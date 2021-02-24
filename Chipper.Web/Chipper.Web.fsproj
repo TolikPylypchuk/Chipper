@@ -25,7 +25,7 @@
     <PackageReference Include="FSharp.Control.Reactive" Version="4.5.0" />
     <PackageReference Include="FSharp.SystemTextJson" Version="0.16.6" />
     <PackageReference Include="FsToolkit.ErrorHandling" Version="2.0.0" />
-    <PackageReference Include="LibSassBuilder" Version="1.5.0" />
+    <PackageReference Include="LibSassBuilder" Version="1.6.0" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" Version="5.0.3" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="5.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="5.0.1" />

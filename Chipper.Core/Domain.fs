@@ -56,24 +56,23 @@ type GameSessionId = GameSessionId of Guid
 
 type GameSessionName = private GameSessionName of string
 
-type NewGameSession = {
-    Id : GameSessionId
-    Name : GameSessionName
-    PlayerName : PlayerName
-    Date : DateTime
+type GameSessionConfig = {
+    ConfigId : GameSessionId
+    ConfigName : GameSessionName
+    ConfigDate : DateTime
+    ConfigHost : Player
+    ConfigPlayers : Player list
+    ConfigRaiseType : RaiseType
+    ConfigBettingType : BettingType
 }
 
-type GameSessionConfig = {
+type GameSession = private {
     Id : GameSessionId
     Name : GameSessionName
     Date : DateTime
     Players : NonEmptyList<Player>
     RaiseType : RaiseType
     BettingType : BettingType
-}
-
-type GameSession = private {
-    Config : GameSessionConfig
     Games : Game list
 }
 
@@ -134,28 +133,37 @@ module GameSessionName =
 [<RequireQualifiedAccess>]
 module GameSession =
 
-    let defaultConfig newSession =
-        let player = { Name = newSession.PlayerName; Chips = [] }
+    let defaultConfig id name date hostName =
+        let host = { Name = hostName; Chips = [] }
         {
-            Id = newSession.Id
-            Name = newSession.Name
-            Date = newSession.Date
-            Players = NonEmptyList.create player []
-            RaiseType = NoLimit
-            BettingType = Blinds
+            ConfigId = id
+            ConfigName = name
+            ConfigDate = date
+            ConfigHost = host
+            ConfigPlayers = []
+            ConfigRaiseType = NoLimit
+            ConfigBettingType = Blinds
         }
 
-    let fromConfig sessionConfig =
-        let numPlayers = sessionConfig.Players |> NonEmptyList.length
-        if numPlayers > 1 && numPlayers <= 20
-        then { Config = sessionConfig; Games = [] } |> Ok
-        else InvalidGamePlayersNumber numPlayers |> Error
+    let fromConfig config =
+        let numPlayers = config.ConfigPlayers |> List.length
+        if numPlayers > 0 && numPlayers <= 20 then
+            {
+                Id = config.ConfigId
+                Name = config.ConfigName
+                Date = config.ConfigDate
+                Players = NonEmptyList.create config.ConfigHost config.ConfigPlayers
+                RaiseType = config.ConfigRaiseType
+                BettingType = config.ConfigBettingType
+                Games = []
+            } |> Ok
+        else
+            InvalidGamePlayersNumber numPlayers |> Error
 
-    let config session = session.Config
-    let id session = session.Config.Id
-    let players session = session.Config.Players
-    let raiseType session = session.Config.RaiseType
-    let bettingsType session = session.Config.BettingType
+    let id session = session.Id
+    let players session = session.Players
+    let raiseType session = session.RaiseType
+    let bettingsType session = session.BettingType
     let games session = session.Games
 
 [<AutoOpen>]

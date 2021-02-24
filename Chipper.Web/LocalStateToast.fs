@@ -44,11 +44,7 @@ type LocalStateToast () =
 
                 div [ attr.class' "toast-body" ] [
                     match model with
-                    | StartingSession { Name = GameSessionName sessionName } ->
-                        text <| sprintf
-                            "It appears that you were previously creating a game: %s. Would you like to continue?"
-                            sessionName
-                    | ConfiguringSession { Name = GameSessionName sessionName } ->
+                    | ConfiguringSession { ConfigName = GameSessionName sessionName } ->
                         text <| sprintf
                             "It appears that you were previously configuring a game: %s. Would you like to continue?"
                             sessionName

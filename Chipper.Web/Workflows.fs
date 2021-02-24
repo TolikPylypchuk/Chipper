@@ -12,12 +12,8 @@ let getState storage repo = async {
     let! localState = storage.GetState ()
     let! currentState = async {
         match localState with
-        | StartingSession newSession ->
-            match! repo |> getSession newSession.Id with
-            | Ok (NewSession newSession) -> return StartingSession newSession |> Some
-            | _ -> return None
         | ConfiguringSession config ->
-            match! repo |> getSession config.Id with
+            match! repo |> getSession config.ConfigId with
             | Ok (ConfigurableSession config) -> return ConfiguringSession config |> Some
             | _ -> return None
         | _ -> return None
@@ -35,8 +31,8 @@ let getState storage repo = async {
 
 let loadState model state =
     match model.Page, state with
-    | InvitePage, (StartingSession _ as state) ->
-        { model with State = state; LocalState = None; IsLoaded = true }, Cmd.none
+    | StartPage, state ->
+        { model with State = AddingSessionName ("", ""); LocalState = Some state; IsLoaded = true }, Cmd.none
     | JoinPage _, NoState ->
         { model with LocalState = None; IsLoaded = true }, Cmd.none
     | JoinPage _, state ->
@@ -46,15 +42,15 @@ let loadState model state =
     | _ ->
         { model with Page = HomePage; LocalState = Some state; IsLoaded = true }, Cmd.none
 
-let startNewSession storage repo model name playerName' =
+let saveNewSession storage repo model name playerName' =
     let result = asyncResult {
         let! name = gameSessionName name
         let! playerName' = playerName playerName'
-        let! newSession = repo |> createSession name playerName'
+        let! config = repo |> createSession name playerName'
 
-        let state = StartingSession newSession
+        let state = ConfiguringSession config
         do! storage.SetState state
-        return SetModel { model with Page = InvitePage; State = state }
+        return SetModel { model with Page = ConfigurePage; State = state }
     }
 
     result |> handleAsyncMessageError
@@ -66,7 +62,7 @@ let configureSession storage repo model config =
         do! storage.SetState state
         return SetModel { model with Page = ConfigurePage; State = state }
     }
-
+    
     result |> handleAsyncMessageError
 
 let getSessionToJoin id repo =
@@ -78,8 +74,7 @@ let getSessionToJoin id repo =
 
         let! name = result {
             match session with
-            | NewSession session -> return session.Name
-            | ConfigurableSession session -> return session.Name
+            | ConfigurableSession session -> return session.ConfigName
             | PersistentSession _ -> return! Error <| CustomError "The session is already in progress"
         }
 

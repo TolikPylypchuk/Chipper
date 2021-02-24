@@ -8,7 +8,6 @@ open Chipper.Core.Domain
 type Page =
     | HomePage
     | StartPage
-    | InvitePage
     | JoinPage of SessionId : Guid
     | ConfigurePage
     | PlayPage
@@ -28,7 +27,6 @@ type PlayerJoinInfo = {
 type LocalState =
     | NoState
     | AddingSessionName of string * string
-    | StartingSession of NewGameSession
     | JoiningSession of JoiningPlayer
     | JoiningInvalidSession
     | ConfiguringSession of GameSessionConfig
