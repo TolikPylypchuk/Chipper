@@ -121,7 +121,7 @@ let view js createJoinUrl model dispatch =
         mainView js createJoinUrl model dispatch
 
         match model.LocalState with
-        | Some state -> ecomp<LocalStateToast, _, _> [] state dispatch
+        | Some state -> ToastComponent.localState state dispatch
         | _ -> empty
     ]
 

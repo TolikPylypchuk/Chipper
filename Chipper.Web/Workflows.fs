@@ -37,6 +37,8 @@ let loadState model state =
         { model with LocalState = None; IsLoaded = true }, Cmd.none
     | JoinPage _, state ->
         { model with LocalState = Some state; IsLoaded = true }, Cmd.none
+    | ConfigurePage, (ConfiguringSession _ as state) ->
+        { model with State = state; LocalState = None; IsLoaded = true }, Cmd.none
     | _, NoState ->
         { model with Page = HomePage; LocalState = None; IsLoaded = true }, Cmd.none
     | _ ->
