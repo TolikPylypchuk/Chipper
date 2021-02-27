@@ -40,7 +40,7 @@ let startPage isValid isReadonly sessionName playerName dispatch =
                     attr.class' "form-control"
                     attr.readonly <| isReadonly
                     attr.placeholder "Your Name"
-                    bind.input.string playerName (DebounceStart >> InputPlayerName >> dispatch)
+                    bind.input.string playerName (InputPlayerName >> dispatch)
                 ]
             ]
 
@@ -51,7 +51,7 @@ let startPage isValid isReadonly sessionName playerName dispatch =
                     attr.readonly <| isReadonly
                     attr.placeholder "Game Name"
                     attr.aria "describedby" "session-name-help"
-                    bind.input.string sessionName (DebounceStart >> InputSessionName >> dispatch)
+                    bind.input.string sessionName (InputSessionName >> dispatch)
                 ]
 
                 div [ attr.id "session-name-help"; attr.class' "form-text" ] [
@@ -86,7 +86,7 @@ let joinPage sessionName (newPlayer : Result<PlayerJoinInfo, _>) dispatch =
                     attr.type' "text"
                     attr.class' "form-control"
                     attr.placeholder "Your Name"
-                    bind.input.string name (DebounceStart >> InputPlayerName >> dispatch)
+                    bind.input.string name (InputPlayerName >> dispatch)
                 ]
             ]
 

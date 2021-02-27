@@ -3,10 +3,6 @@ namespace Chipper.Web
 open Chipper.Core
 open Chipper.Core.Domain
 
-type Debounced<'a> =
-    | DebounceStart of 'a
-    | DebounceEnd of 'a
-
 type Message =
     | SetPage of Page
     | LoadLocalState of LocalState
@@ -15,9 +11,9 @@ type Message =
     | ClearLocalState
     | SetModel of Model
     | StartGameSession
-    | InputSessionName of Debounced<string>
+    | InputSessionName of string
     | SaveSessionName
-    | InputPlayerName of Debounced<string>
+    | InputPlayerName of string
     | RequestAccess of PlayerJoinInfo
     | SetBettingType of BettingType
     | SetRaiseType of RaiseType

@@ -3,8 +3,6 @@ module Chipper.Web.ChipperApp
 open System
 open Microsoft.Extensions.DependencyInjection
 
-open FSharp.Control.Reactive
-
 open Elmish
 open Flurl
 open Bolero
@@ -13,23 +11,6 @@ open Bolero.Html
 open Chipper.Core.Domain
 open Chipper.Core.Persistence
 open Chipper.Web.Workflows
-
-let private inputSubject = Subject.behavior ""
-
-let private inputDebouncer = inputSubject |> Observable.throttle (TimeSpan.FromMilliseconds(300.0))
-
-let cmdDebounceInput message x =
-    Cmd.ofSub (fun dispatch ->
-        inputSubject
-        |> Subject.onNext x
-        |> ignore
-
-        inputDebouncer
-        |> Observable.take 1
-        |> Observable.map DebounceEnd
-        |> Observable.map message
-        |> Observable.subscribe dispatch
-        |> ignore)
 
 let init storage repo =
     let model = { Page = HomePage; State = NoState; LocalState = None; IsLoaded = false }
@@ -76,16 +57,10 @@ let update storage repo message model =
     | StartGameSession, _ ->
         { model with Page = StartPage; State = AddingSessionName ("", "") }, Cmd.none
 
-    | InputSessionName (DebounceStart name), _ ->
-        model, name |> cmdDebounceInput InputSessionName
-
-    | InputSessionName (DebounceEnd name), AddingSessionName (_, playerName) ->
+    | InputSessionName name, AddingSessionName (_, playerName) ->
         { model with State = AddingSessionName (name, playerName) }, Cmd.none
 
-    | InputPlayerName (DebounceStart name), _ ->
-        model, name |> cmdDebounceInput InputPlayerName
-
-    | InputPlayerName (DebounceEnd playerName), AddingSessionName (name, _) ->
+    | InputPlayerName playerName, AddingSessionName (name, _) ->
         { model with State = AddingSessionName (name, playerName) }, Cmd.none
 
     | SaveSessionName, AddingSessionName (name, playerName) ->
@@ -94,7 +69,7 @@ let update storage repo message model =
     | SaveSessionName, ConfiguringSession _ ->
         { model with Page = ConfigurePage }, Cmd.none
 
-    | InputPlayerName (DebounceEnd name), JoiningSession { GameSessionId = id; GameSessionName = sessionName } ->
+    | InputPlayerName name, JoiningSession { GameSessionId = id; GameSessionName = sessionName } ->
         let state = JoiningSession { GameSessionId = id; GameSessionName = sessionName; Name = name }
         { model with State = state }, Cmd.none
 
