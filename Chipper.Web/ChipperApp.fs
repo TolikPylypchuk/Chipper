@@ -1,6 +1,5 @@
 module Chipper.Web.ChipperApp
 
-open System
 open Microsoft.Extensions.DependencyInjection
 
 open Elmish
@@ -18,7 +17,7 @@ let init storage repo =
 
     model, cmd
 
-let update storage repo message model =
+let update storage repo mediator message model =
     match message, model.State with
 
     | SetError e, _ ->
@@ -37,8 +36,8 @@ let update storage repo message model =
     | RecoverLocalState, _ ->
         let newModel = { model with LocalState = None }
         match model.LocalState with
-        | Some (ConfiguringSession _ as state) ->
-            { model with Page = ConfigurePage; State = state; LocalState = None }, Cmd.none
+        | Some (ConfiguringSession ({ ConfigId = id }, _) as state) ->
+            { model with Page = ConfigurePage; State = state; LocalState = None }, mediator |> createEventLoop id
         | _ -> newModel, Cmd.none
 
     | IgnoreLocalState, _ ->
@@ -64,20 +63,33 @@ let update storage repo message model =
         { model with State = AddingSessionName (name, playerName) }, Cmd.none
 
     | SaveSessionName, AddingSessionName (name, playerName) ->
-        model, Cmd.OfAsync.result <| saveNewSession storage repo model name playerName
-        
+        model, Cmd.OfAsync.result <| saveNewSession repo name playerName
+
+    | SessionSaved config, _ ->
+        let state = ConfiguringSession (config, [])
+        storage |> setStateSimple state
+        { model with Page = ConfigurePage; State = state }, mediator |> createEventLoop config.ConfigId
+
     | SaveSessionName, ConfiguringSession _ ->
         { model with Page = ConfigurePage }, Cmd.none
 
     | InputPlayerName name, JoiningSession { GameSessionId = id; GameSessionName = sessionName } ->
         let state = JoiningSession { GameSessionId = id; GameSessionName = sessionName; Name = name }
         { model with State = state }, Cmd.none
+        
+    | RequestAccess joinInfo, JoiningSession player ->
+        mediator |> EventMediator.post (PlayerAccessRequest joinInfo) player.GameSessionId
+        let state = AwaitingJoinConfirmation player
+        { model with State = state }, Cmd.none
+        
+    | ReceiveEvent (PlayerAccessRequest joinInfo), ConfiguringSession (config, players) ->
+        { model with State = ConfiguringSession (config, joinInfo :: players) }, Cmd.none
 
-    | SetBettingType bettingType, ConfiguringSession config ->
+    | SetBettingType bettingType, ConfiguringSession (config, _) ->
         let config = { config with ConfigBettingType = bettingType }
         model, Cmd.OfAsync.result <| configureSession storage repo model config
 
-    | SetRaiseType raiseType, ConfiguringSession config ->
+    | SetRaiseType raiseType, ConfiguringSession (config, _) ->
         let config = { config with ConfigRaiseType = raiseType }
         model, Cmd.OfAsync.result <| configureSession storage repo model config
 
@@ -97,22 +109,26 @@ let mainView js createJoinUrl model dispatch =
         View.startPage isValid false sessionName playerName dispatch
 
     | { Page = JoinPage _; State = JoiningSession ({ GameSessionName = (GameSessionName name) } as player) } ->
-        View.joinPage name (player |> Model.tryCreateJoinInfo) dispatch
+        View.joinPage name (player |> Model.tryCreateJoinInfo) false dispatch
+        
+    | {
+        Page = JoinPage _
+        State = AwaitingJoinConfirmation ({ GameSessionName = (GameSessionName name) } as player)
+     } ->
+        View.joinPage name (player |> Model.tryCreateJoinInfo) true dispatch
 
     | { Page = JoinPage _; State = JoiningInvalidSession } ->
         View.invalidJoinPage
 
     | {
         Page = StartPage
-        State = ConfiguringSession {
-            ConfigName = GameSessionName sessionName
-            ConfigHost = { Name = PlayerName hostName }
-        }
+        State = ConfiguringSession
+            ({ ConfigName = GameSessionName sessionName; ConfigHost = { Name = PlayerName hostName } }, _)
      } ->
         View.startPage true true sessionName hostName dispatch
 
-    | { Page = ConfigurePage; State = ConfiguringSession config } ->
-        View.configurePage js config (createJoinUrl config.ConfigId) dispatch
+    | { Page = ConfigurePage; State = ConfiguringSession (config, playerRequests) } ->
+        View.configurePage js config playerRequests (createJoinUrl config.ConfigId) dispatch
 
     | _ -> View.notImplementedPage
 
@@ -132,11 +148,12 @@ type AppComponent() =
         let settings = this.Services.GetRequiredService<AppSettings>()
         let repo = this.Services.GetRequiredService<GameSessionRepository>()
         let storage = this.Services.GetRequiredService<LocalStorage>()
+        let mediator = this.Services.GetRequiredService<EventMediator>()
 
         let createJoinUrl = fun (GameSessionId id) -> Url.Combine(settings.UrlRoot, (router.Link <| JoinPage id))
 
         let init _ = init storage repo
-        let update = update storage repo
+        let update = update storage repo mediator
         let view = view this.JSRuntime createJoinUrl
 
         Program.mkProgram init update view

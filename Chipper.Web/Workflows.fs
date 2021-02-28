@@ -12,9 +12,9 @@ let getState storage repo = async {
     let! localState = storage.GetState ()
     let! currentState = async {
         match localState with
-        | ConfiguringSession config ->
+        | ConfiguringSession (config, playerRequests) ->
             match! repo |> getSession config.ConfigId with
-            | Ok (ConfigurableSession config) -> return ConfiguringSession config |> Some
+            | Ok (ConfigurableSession config) -> return ConfiguringSession (config, playerRequests) |> Some
             | _ -> return None
         | _ -> return None
     }
@@ -28,6 +28,8 @@ let getState storage repo = async {
         do! storage.ClearState ()
         return NoState
 }
+
+let setStateSimple state storage = storage.SetState state |> Async.StartImmediate
 
 let loadState model state =
     match model.Page, state with
@@ -44,15 +46,16 @@ let loadState model state =
     | _ ->
         { model with Page = HomePage; LocalState = Some state; IsLoaded = true }, Cmd.none
 
-let saveNewSession storage repo model name playerName' =
+let createEventLoop id mediator =
+    Cmd.ofSub (fun dispatch -> mediator |> EventMediator.subscribe id (ReceiveEvent >> dispatch) |> ignore)
+
+let saveNewSession repo name playerName' =
     let result = asyncResult {
         let! name = gameSessionName name
         let! playerName' = playerName playerName'
         let! config = repo |> createSession name playerName'
 
-        let state = ConfiguringSession config
-        do! storage.SetState state
-        return SetModel { model with Page = ConfigurePage; State = state }
+        return SessionSaved config
     }
 
     result |> handleAsyncMessageError
@@ -60,7 +63,7 @@ let saveNewSession storage repo model name playerName' =
 let configureSession storage repo model config =
     let result = asyncResult {
         do! repo |> updateSession (ConfigurableSession config)
-        let state = ConfiguringSession config
+        let state = ConfiguringSession (config, [])
         do! storage.SetState state
         return SetModel { model with Page = ConfigurePage; State = state }
     }

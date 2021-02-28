@@ -29,7 +29,8 @@ type LocalState =
     | AddingSessionName of string * string
     | JoiningSession of JoiningPlayer
     | JoiningInvalidSession
-    | ConfiguringSession of GameSessionConfig
+    | AwaitingJoinConfirmation of JoiningPlayer
+    | ConfiguringSession of GameSessionConfig * PlayerJoinInfo list
 
 type Model = {
     Page : Page

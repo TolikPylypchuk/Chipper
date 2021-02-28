@@ -8,6 +8,7 @@
     <Compile Include="Util.fs" />
     <Compile Include="AppSettings.fs" />
     <Compile Include="Model.fs" />
+    <Compile Include="Event.fs" />
     <Compile Include="Message.fs" />
     <Compile Include="AppRouter.fs" />
     <Compile Include="ToastComponent.fs" />
@@ -15,6 +16,7 @@
     <Compile Include="LocalStorage.fs" />
     <Compile Include="Workflows.fs" />
     <Compile Include="ChipperApp.fs" />
+    <Compile Include="Services.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 

@@ -10,9 +10,11 @@ type Message =
     | IgnoreLocalState
     | ClearLocalState
     | SetModel of Model
+    | ReceiveEvent of Event
     | StartGameSession
     | InputSessionName of string
     | SaveSessionName
+    | SessionSaved of GameSessionConfig
     | InputPlayerName of string
     | RequestAccess of PlayerJoinInfo
     | SetBettingType of BettingType

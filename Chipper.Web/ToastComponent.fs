@@ -28,7 +28,7 @@ module Toast =
             Header = fun _ -> text "Hi there!"
             Body =
                 function
-                | ConfiguringSession { ConfigName = GameSessionName sessionName } ->
+                | ConfiguringSession ({ ConfigName = GameSessionName sessionName }, _) ->
                     text <| sprintf
                         "It appears that you were previously configuring a game: %s. Would you like to continue?"
                         sessionName

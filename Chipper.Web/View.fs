@@ -72,7 +72,7 @@ let startPage isValid isReadonly sessionName playerName dispatch =
         ]
     ]
 
-let joinPage sessionName (newPlayer : Result<PlayerJoinInfo, _>) dispatch =
+let joinPage sessionName (newPlayer : Result<PlayerJoinInfo, _>) isAwaiting dispatch =
     let name, isValid = match newPlayer with Ok player -> player.PlayerName |> PlayerName.value, true | _ -> "", false
 
     div [ attr.class' "h-100 d-flex align-items-center" ] [
@@ -94,12 +94,31 @@ let joinPage sessionName (newPlayer : Result<PlayerJoinInfo, _>) dispatch =
                 button [
                     attr.type' "button"
                     attr.class' "btn btn-primary btn-lg"
-                    attr.disabled <| not isValid
+                    attr.disabled (not isValid || isAwaiting)
                     on.click (fun _ -> match newPlayer with Ok player -> dispatch <| RequestAccess player | _ -> ())
                 ] [
                     text "Request Access"
                 ]
             ]
+
+            cond isAwaiting <| function
+                | true ->
+                    div [ attr.class' "text-center" ] [
+                        div [ attr.class' "progress m-4" ] [
+                            div [
+                                attr.class' "progress-bar progress-bar-striped progress-bar-animated w-100"
+                                attr.role "progressbar"
+                                attr.aria "valuenow" 50
+                                attr.aria "valuemin" 0
+                                attr.aria "valuemax" 100
+                            ] []
+                        ]
+                            
+                        p [] [
+                            text "Awaiting confirmation . . ."
+                        ]
+                    ]
+                | false -> empty
         ]
     ]
 
@@ -110,7 +129,7 @@ let invalidJoinPage =
         ]
     ]
     
-let configurePage js config joinUrl dispatch =
+let configurePage js config playerRequests joinUrl dispatch =
     div [ attr.class' "container" ] [
         h1 [ attr.class' "display-1 p-lg-4 p-md-3 p-2 text-center" ] [
             text "Configure the Game"
@@ -185,6 +204,21 @@ let configurePage js config joinUrl dispatch =
                             |> text
                         ]
                     ]
+            ]
+        ]
+        
+        div [ attr.class' "row justify-content-md-center" ] [
+            section [ attr.class' "col-md-auto m-2 m-md-4" ] [
+                h6 [] [
+                    text <| "Player Requests"
+                ]
+
+                ul [ attr.class' "list-group" ] [
+                    forEach playerRequests <| fun { PlayerName = (PlayerName name) } ->
+                        li [ attr.class' "list-group-item" ] [
+                            text name
+                        ]
+                ]
             ]
         ]
 
