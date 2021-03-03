@@ -15,6 +15,34 @@ open Chipper.Core.Domain
 open Chipper.Core.Persistence
 open Chipper.Web
 
+type EventSubject = EventSubject of System.Reactive.Subjects.Subject<GameSessionEvent>
+
+type RxEventMediator (subject : EventSubject) =
+
+    let (EventSubject events) = subject
+    let mutable subscription = Unchecked.defaultof<IDisposable>
+
+    interface IEventMediator with
+
+        member _.Post event =
+                events
+                |> Subject.onNext event
+                |> ignore
+                
+        member _.Subscribe id callback =
+            subscription <-
+                events
+                |> Observable.filter (fun event -> event.GameSessionId = id)
+                |> Observable.map (fun event -> event.Event)
+                |> Observable.subscribe callback
+
+    interface IDisposable with
+
+        member _.Dispose() =
+            if subscription <> null then
+                subscription.Dispose()
+                subscription <- null
+
 let settings (services: IServiceProvider) =
     let config = services.GetRequiredService<IConfiguration>()
     let appConfig = config.GetSection("App")
@@ -51,20 +79,4 @@ let inMemoryRepository () =
         UpdateSession = fun session -> async { return (storage.[session |> PersistentGameSession.id] <- session) |> Ok }
 
         DeleteSession = fun id -> async { return storage.Remove(id) |> ignore |> Ok }
-    }
-
-let rxEventMediator () =
-    let events = Subject<GameSessionEvent>.broadcast
-
-    {
-        Post = fun event ->
-            events
-            |> Subject.onNext event
-            |> ignore
-
-        Subscribe = fun id callback ->
-            events
-            |> Observable.filter (fun event -> event.GameSessionId = id)
-            |> Observable.map (fun event -> event.Event)
-            |> Observable.subscribe callback
     }

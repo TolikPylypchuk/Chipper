@@ -7,6 +7,8 @@ open Microsoft.AspNetCore.Hosting
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Hosting
 
+open FSharp.Control.Reactive
+
 open Blazored.LocalStorage
 open Bolero.Server.RazorHost
 
@@ -27,7 +29,8 @@ let configureServices (services: IServiceCollection) =
     services
         .AddSingleton<AppSettings>(settings)
         .AddSingleton(inMemoryRepository ())
-        .AddSingleton(rxEventMediator ())
+        .AddSingleton<EventSubject>(fun _ -> EventSubject Subject<GameSessionEvent>.broadcast)
+        .AddScoped<IEventMediator, RxEventMediator>()
         .AddScoped<LocalStorage>(fun services -> localStorage services)
         |> ignore
 

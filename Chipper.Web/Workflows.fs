@@ -47,7 +47,7 @@ let loadState model state =
         { model with Page = HomePage; LocalState = Some state; IsLoaded = true }, Cmd.none
 
 let createEventLoop id mediator =
-    Cmd.ofSub (fun dispatch -> mediator |> EventMediator.subscribe id (ReceiveEvent >> dispatch) |> ignore)
+    Cmd.ofSub (fun dispatch -> mediator |> EventMediator.subscribe id (ReceiveEvent >> dispatch))
 
 let saveNewSession repo name playerName' =
     let result = asyncResult {

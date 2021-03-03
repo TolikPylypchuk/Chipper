@@ -148,7 +148,7 @@ type AppComponent() =
         let settings = this.Services.GetRequiredService<AppSettings>()
         let repo = this.Services.GetRequiredService<GameSessionRepository>()
         let storage = this.Services.GetRequiredService<LocalStorage>()
-        let mediator = this.Services.GetRequiredService<EventMediator>()
+        let mediator = this.Services.GetRequiredService<IEventMediator>()
 
         let createJoinUrl = fun (GameSessionId id) -> Url.Combine(settings.UrlRoot, (router.Link <| JoinPage id))
 
