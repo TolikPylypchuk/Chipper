@@ -90,18 +90,21 @@ let joinPage sessionName (newPlayer : Result<PlayerJoinInfo, _>) isAwaiting disp
                 ]
             ]
 
-            div [ attr.class' "text-center m-4" ] [
-                button [
-                    attr.type' "button"
-                    attr.class' "btn btn-primary btn-lg"
-                    attr.disabled (not isValid || isAwaiting)
-                    on.click (fun _ -> match newPlayer with Ok player -> dispatch <| RequestAccess player | _ -> ())
-                ] [
-                    text "Request Access"
-                ]
-            ]
-
             cond isAwaiting <| function
+                | false ->
+                    div [ attr.class' "text-center m-4" ] [
+                        button [
+                            attr.type' "button"
+                            attr.class' "btn btn-primary btn-lg"
+                            attr.disabled (not isValid || isAwaiting)
+                            on.click (fun _ ->
+                                match newPlayer with
+                                | Ok player -> dispatch <| RequestAccess player
+                                | _ -> ())
+                        ] [
+                            text "Request Access"
+                        ]
+                    ]
                 | true ->
                     div [ attr.class' "text-center" ] [
                         div [ attr.class' "progress m-4" ] [
@@ -118,7 +121,6 @@ let joinPage sessionName (newPlayer : Result<PlayerJoinInfo, _>) isAwaiting disp
                             text "Awaiting confirmation . . ."
                         ]
                     ]
-                | false -> empty
         ]
     ]
 
@@ -178,7 +180,7 @@ let configurePage js config playerRequests joinUrl dispatch =
                         ]
                     ]
             ]
-                
+
             section [ attr.class' "col-md-auto m-2 m-md-4" ] [
                 h6 [] [
                     text <| "Raise Type"
@@ -186,6 +188,7 @@ let configurePage js config playerRequests joinUrl dispatch =
 
                 forEach [ NoLimit; Limit; PotLimit ] <| fun raiseType ->
                     let inputId = sprintf "raise-%O" raiseType
+
                     div [ attr.class' "form-check" ] [
                         input [
                             attr.id <| inputId
@@ -210,13 +213,69 @@ let configurePage js config playerRequests joinUrl dispatch =
         div [ attr.class' "row justify-content-md-center" ] [
             section [ attr.class' "col-md-auto m-2 m-md-4" ] [
                 h6 [] [
+                    text <| "Players"
+                ]
+
+                ul [ attr.class' "list-group w-100" ] [
+                    forEach (config.ConfigHost :: config.ConfigPlayers) <| fun player ->
+                        let (PlayerName name) = player.Name
+
+                        li [
+                            attr.class' "list-group-item d-flex flex-row align-items-center justify-content-between"
+                        ] [
+                            span [ attr.class' "me-3" ] [
+                                text name
+                            ]
+
+                            div [] [
+                                button [
+                                    attr.type' "button"
+                                    attr.class' "btn btn-secondary btn-sm m-1"
+                                ] [
+                                    i [ attr.class' "bi bi-pencil-square" ] []
+                                ]
+
+                                button [
+                                    attr.type' "button"
+                                    attr.class' "btn btn-danger btn-sm m-1"
+                                    attr.disabled (player.Name = config.ConfigHost.Name)
+                                ] [
+                                    i [ attr.class' "bi bi-x-circle" ] []
+                                ]
+                            ]
+                        ]
+                ]
+            ]
+
+            section [ attr.class' "col-md-auto m-2 m-md-4" ] [
+                h6 [] [
                     text <| "Player Requests"
                 ]
 
-                ul [ attr.class' "list-group" ] [
+                ul [ attr.class' "list-group w-100" ] [
                     forEach playerRequests <| fun { PlayerName = (PlayerName name) } ->
-                        li [ attr.class' "list-group-item" ] [
-                            text name
+                        li [
+                            attr.class' "list-group-item d-flex flex-row align-items-center justify-content-between"
+                        ] [
+                            span [ attr.class' "me-3" ] [
+                                text name
+                            ]
+
+                            div [] [
+                                button [
+                                    attr.type' "button"
+                                    attr.class' "btn btn-success btn-sm m-1"
+                                ] [
+                                    i [ attr.class' "bi bi-check2-circle" ] []
+                                ]
+
+                                button [
+                                    attr.type' "button"
+                                    attr.class' "btn btn-danger btn-sm m-1"
+                                ] [
+                                    i [ attr.class' "bi bi-x-circle" ] []
+                                ]
+                            ]
                         ]
                 ]
             ]
