@@ -24,13 +24,23 @@ type PlayerJoinInfo = {
     PlayerName : PlayerName
 }
 
+type ConfigSessionEditMode =
+    | NoEdit
+    | Player of PlayerName * string
+
+type ConfigSessionState = {
+    Config : GameSessionConfig
+    PlayerRequests : PlayerJoinInfo list
+    EditMode : ConfigSessionEditMode
+}
+
 type LocalState =
     | NoState
     | AddingSessionName of string * string
     | JoiningSession of JoiningPlayer
     | JoiningInvalidSession
     | AwaitingJoinConfirmation of JoiningPlayer
-    | ConfiguringSession of GameSessionConfig * PlayerJoinInfo list
+    | ConfiguringSession of ConfigSessionState
 
 type Model = {
     Page : Page

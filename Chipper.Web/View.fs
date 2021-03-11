@@ -131,10 +131,10 @@ let invalidJoinPage =
         ]
     ]
     
-let configurePage js config playerRequests joinUrl dispatch =
+let configurePage js state joinUrl isPlayerNameValid dispatch =
     div [ attr.class' "container" ] [
         h1 [ attr.class' "display-1 p-lg-4 p-md-3 p-2 text-center" ] [
-            text "Configure the Game"
+            text $"Configure {state.Config.ConfigName}"
         ]
 
         p [ attr.class' "lead m-2 text-center" ] [
@@ -156,104 +156,82 @@ let configurePage js config playerRequests joinUrl dispatch =
                 text "Copy the link"
             ]
         ]
-
-        div [ attr.class' "row justify-content-md-center" ] [
-            section [ attr.class' "col-md-auto m-2 m-md-4" ] [
-                h6 [] [
-                    text <| "Betting Type"
-                ]
-
-                forEach [ Blinds; Antes ] <| fun betType ->
-                    let inputId = sprintf "bet-%O" betType
-                    div [ attr.class' "form-check" ] [
-                        input [
-                            attr.id <| inputId
-                            attr.name "bet"
-                            attr.type' "radio"
-                            attr.class' "form-check-input"
-                            attr.checked' (config.ConfigBettingType = betType)
-                            bind.change.string (string betType) (fun _ -> dispatch <| SetBettingType betType)
-                        ]
-
-                        label [ attr.for' inputId; attr.class' "form-check-label" ] [
-                            text <| match betType with Blinds -> "Blinds" | Antes -> "Antes"
-                        ]
-                    ]
-            ]
-
-            section [ attr.class' "col-md-auto m-2 m-md-4" ] [
-                h6 [] [
-                    text <| "Raise Type"
-                ]
-
-                forEach [ NoLimit; Limit; PotLimit ] <| fun raiseType ->
-                    let inputId = sprintf "raise-%O" raiseType
-
-                    div [ attr.class' "form-check" ] [
-                        input [
-                            attr.id <| inputId
-                            attr.name "raise"
-                            attr.type' "radio"
-                            attr.class' "form-check-input"
-                            attr.checked' (config.ConfigRaiseType = raiseType)
-                            bind.change.string (string raiseType) (fun _ -> dispatch <| SetRaiseType raiseType)
-                        ]
-
-                        label [ attr.for' inputId; attr.class' "form-check-label" ] [
-                            match raiseType with
-                            | Limit -> "Limited"
-                            | NoLimit -> "Unlimited"
-                            | PotLimit -> "Pot-limited"
-                            |> text
-                        ]
-                    ]
-            ]
-        ]
         
         div [ attr.class' "row justify-content-md-center" ] [
             section [ attr.class' "col-md-auto m-2 m-md-4" ] [
                 h6 [] [
-                    text <| "Players"
+                    text "Players"
                 ]
 
                 ul [ attr.class' "list-group w-100" ] [
-                    forEach (config.ConfigHost :: config.ConfigPlayers) <| fun player ->
+                    forEach (state.Config.ConfigHost :: state.Config.ConfigPlayers) <| fun player ->
                         let (PlayerName name) = player.Name
 
                         li [
                             attr.class' "list-group-item d-flex flex-row align-items-center justify-content-between"
                         ] [
-                            span [ attr.class' "me-3" ] [
-                                text name
-                            ]
+                            cond state.EditMode <| function
+                                | Player (playerName', editedName) when playerName' = player.Name ->
+                                    concat [
+                                        input [
+                                            attr.name "player-name"
+                                            bind.input.string editedName (dispatch << InputPlayerName)
+                                        ]
 
-                            div [] [
-                                button [
-                                    attr.type' "button"
-                                    attr.class' "btn btn-secondary btn-sm m-1"
-                                ] [
-                                    i [ attr.class' "bi bi-pencil-square" ] []
-                                ]
+                                        div [] [
+                                            button [
+                                                attr.type' "button"
+                                                attr.class' "btn btn-success btn-sm m-1"
+                                                attr.disabled (not <| isPlayerNameValid editedName)
+                                                on.click (fun _ -> dispatch AcceptEdit)
+                                            ] [
+                                                i [ attr.class' "bi bi-check2-circle" ] []
+                                            ]
 
-                                button [
-                                    attr.type' "button"
-                                    attr.class' "btn btn-danger btn-sm m-1"
-                                    attr.disabled (player.Name = config.ConfigHost.Name)
-                                ] [
-                                    i [ attr.class' "bi bi-x-circle" ] []
-                                ]
-                            ]
+                                            button [
+                                                attr.type' "button"
+                                                attr.class' "btn btn-danger btn-sm m-1"
+                                                on.click (fun _ -> dispatch CancelEdit)
+                                            ] [
+                                                i [ attr.class' "bi bi-x-circle" ] []
+                                            ]
+                                        ]
+                                    ]
+                                | _ ->
+                                    concat [
+                                        span [ attr.class' "me-3" ] [
+                                            text name
+                                        ]
+
+                                        div [] [
+                                            button [
+                                                attr.type' "button"
+                                                attr.class' "btn btn-secondary btn-sm m-1"
+                                                on.click (fun _ -> dispatch <| EditPlayerName player.Name)
+                                            ] [
+                                                i [ attr.class' "bi bi-pencil-square" ] []
+                                            ]
+
+                                            button [
+                                                attr.type' "button"
+                                                attr.class' "btn btn-danger btn-sm m-1"
+                                                attr.disabled (player.Name = state.Config.ConfigHost.Name)
+                                            ] [
+                                                i [ attr.class' "bi bi-x-circle" ] []
+                                            ]
+                                        ]
+                                    ]
                         ]
                 ]
             ]
 
             section [ attr.class' "col-md-auto m-2 m-md-4" ] [
                 h6 [] [
-                    text <| "Player Requests"
+                    text "Player Requests"
                 ]
 
                 ul [ attr.class' "list-group w-100" ] [
-                    forEach playerRequests <| fun { PlayerName = (PlayerName name) } ->
+                    forEach state.PlayerRequests <| fun { PlayerName = (PlayerName name) } ->
                         li [
                             attr.class' "list-group-item d-flex flex-row align-items-center justify-content-between"
                         ] [
@@ -278,6 +256,59 @@ let configurePage js config playerRequests joinUrl dispatch =
                             ]
                         ]
                 ]
+            ]
+        ]
+
+        div [ attr.class' "row justify-content-md-center" ] [
+            section [ attr.class' "col-md-auto m-2 m-md-4" ] [
+                h6 [] [
+                    text <| "Betting Type"
+                ]
+
+                forEach [ Blinds; Antes ] <| fun betType ->
+                    let inputId = sprintf "bet-%O" betType
+                    div [ attr.class' "form-check" ] [
+                        input [
+                            attr.id <| inputId
+                            attr.name "bet"
+                            attr.type' "radio"
+                            attr.class' "form-check-input"
+                            attr.checked' (state.Config.ConfigBettingType = betType)
+                            bind.change.string (string betType) (fun _ -> dispatch <| SetBettingType betType)
+                        ]
+
+                        label [ attr.for' inputId; attr.class' "form-check-label" ] [
+                            text <| match betType with Blinds -> "Blinds" | Antes -> "Antes"
+                        ]
+                    ]
+            ]
+
+            section [ attr.class' "col-md-auto m-2 m-md-4" ] [
+                h6 [] [
+                    text <| "Raise Type"
+                ]
+
+                forEach [ NoLimit; Limit; PotLimit ] <| fun raiseType ->
+                    let inputId = sprintf "raise-%O" raiseType
+
+                    div [ attr.class' "form-check" ] [
+                        input [
+                            attr.id <| inputId
+                            attr.name "raise"
+                            attr.type' "radio"
+                            attr.class' "form-check-input"
+                            attr.checked' (state.Config.ConfigRaiseType = raiseType)
+                            bind.change.string (string raiseType) (fun _ -> dispatch <| SetRaiseType raiseType)
+                        ]
+
+                        label [ attr.for' inputId; attr.class' "form-check-label" ] [
+                            match raiseType with
+                            | Limit -> "Limited"
+                            | NoLimit -> "Unlimited"
+                            | PotLimit -> "Pot-limited"
+                            |> text
+                        ]
+                    ]
             ]
         ]
 

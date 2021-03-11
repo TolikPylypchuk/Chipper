@@ -5,6 +5,7 @@ open Chipper.Core.Domain
 
 type Message =
     | SetPage of Page
+    | SetError of ChipperError
     | LoadLocalState of LocalState
     | RecoverLocalState
     | IgnoreLocalState
@@ -19,7 +20,9 @@ type Message =
     | RequestAccess of PlayerJoinInfo
     | SetBettingType of BettingType
     | SetRaiseType of RaiseType
-    | SetError of ChipperError
+    | EditPlayerName of PlayerName
+    | AcceptEdit
+    | CancelEdit
 
 [<AutoOpen>]
 module MessageUtil =

@@ -1,12 +1,10 @@
 namespace Chipper.Web
 
-open System
-open System.Reactive.Subjects
-
 open Chipper.Core.Domain
 
 type Event =
-    | PlayerAccessRequest of PlayerJoinInfo
+    | PlayerAccessRequested of PlayerJoinInfo
+    | PlayerRenamed of PlayerName * PlayerName
 
 type GameSessionEvent = {
     GameSessionId : GameSessionId

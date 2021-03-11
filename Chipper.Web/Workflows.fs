@@ -12,9 +12,11 @@ let getState storage repo = async {
     let! localState = storage.GetState ()
     let! currentState = async {
         match localState with
-        | ConfiguringSession (config, playerRequests) ->
+        | ConfiguringSession { Config = config } ->
             match! repo |> getSession config.ConfigId with
-            | Ok (ConfigurableSession config) -> return ConfiguringSession (config, playerRequests) |> Some
+            | Ok (ConfigurableSession config) ->
+                let state = { Config = config; PlayerRequests = []; EditMode = NoEdit }
+                return ConfiguringSession state |> Some
             | _ -> return None
         | _ -> return None
     }
@@ -63,12 +65,40 @@ let saveNewSession repo name playerName' =
 let configureSession storage repo model config =
     let result = asyncResult {
         do! repo |> updateSession (ConfigurableSession config)
-        let state = ConfiguringSession (config, [])
+        let state = ConfiguringSession { Config = config; PlayerRequests = []; EditMode = NoEdit }
         do! storage.SetState state
         return SetModel { model with Page = ConfigurePage; State = state }
     }
     
     result |> handleAsyncMessageError
+
+let isEditedPlayerNameValid players name =
+    match name |> PlayerName.create with
+    | Ok name -> players |> List.forall (fun (player : Player) -> player.Name <> name)
+    | _ -> false
+
+let editPlayerName state playerName editedName =
+    match editedName |> PlayerName.create with
+    | Ok newName ->
+        let newPlayers =
+            state.Config.ConfigPlayers
+            |> List.map (fun player -> if player.Name = playerName then { player with Name = newName } else player)
+
+        let host =
+            if state.Config.ConfigHost.Name = playerName
+            then { state.Config.ConfigHost with Name = newName }
+            else state.Config.ConfigHost
+
+        let newState =
+            ConfiguringSession {
+                state with
+                    Config = { state.Config with ConfigPlayers = newPlayers; ConfigHost = host }
+                    EditMode = NoEdit
+            }
+
+        newState
+    | _ ->
+        ConfiguringSession state
 
 let getSessionToJoin id repo =
     let page = JoinPage id

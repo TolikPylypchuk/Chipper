@@ -36,7 +36,7 @@ let update storage repo mediator message model =
     | RecoverLocalState, _ ->
         let newModel = { model with LocalState = None }
         match model.LocalState with
-        | Some (ConfiguringSession ({ ConfigId = id }, _) as state) ->
+        | Some (ConfiguringSession { Config = { ConfigId = id } } as state) ->
             { model with Page = ConfigurePage; State = state; LocalState = None }, mediator |> createEventLoop id
         | _ -> newModel, Cmd.none
 
@@ -66,7 +66,7 @@ let update storage repo mediator message model =
         model, Cmd.OfAsync.result <| saveNewSession repo name playerName
 
     | SessionSaved config, _ ->
-        let state = ConfiguringSession (config, [])
+        let state = ConfiguringSession { Config = config; PlayerRequests = []; EditMode = NoEdit }
         storage |> setStateSimple state
         { model with Page = ConfigurePage; State = state }, mediator |> createEventLoop config.ConfigId
 
@@ -78,20 +78,38 @@ let update storage repo mediator message model =
         { model with State = state }, Cmd.none
         
     | RequestAccess joinInfo, JoiningSession player ->
-        mediator |> EventMediator.post (PlayerAccessRequest joinInfo) player.GameSessionId
+        mediator |> EventMediator.post (PlayerAccessRequested joinInfo) player.GameSessionId
         let state = AwaitingJoinConfirmation player
         { model with State = state }, Cmd.none
         
-    | ReceiveEvent (PlayerAccessRequest joinInfo), ConfiguringSession (config, players) ->
-        { model with State = ConfiguringSession (config, joinInfo :: players) }, Cmd.none
+    | ReceiveEvent (PlayerAccessRequested joinInfo), ConfiguringSession state ->
+        let newState = { state with PlayerRequests = state.PlayerRequests @ [ joinInfo ] }
+        { model with State = ConfiguringSession newState }, Cmd.none
 
-    | SetBettingType bettingType, ConfiguringSession (config, _) ->
+    | SetBettingType bettingType, ConfiguringSession { Config = config } ->
         let config = { config with ConfigBettingType = bettingType }
         model, Cmd.OfAsync.result <| configureSession storage repo model config
 
-    | SetRaiseType raiseType, ConfiguringSession (config, _) ->
+    | SetRaiseType raiseType, ConfiguringSession { Config = config } ->
         let config = { config with ConfigRaiseType = raiseType }
         model, Cmd.OfAsync.result <| configureSession storage repo model config
+
+    | EditPlayerName playerName, ConfiguringSession state ->
+        let newState =
+            { state with
+                EditMode = ConfigSessionEditMode.Player (playerName, playerName |> PlayerName.value)
+            }
+
+        { model with State = ConfiguringSession newState }, Cmd.none
+        
+    | InputPlayerName editedName, ConfiguringSession ({ EditMode = Player (playerName, _) } as state) ->
+        { model with State = ConfiguringSession { state with EditMode = Player (playerName, editedName) } }, Cmd.none
+
+    | AcceptEdit, ConfiguringSession ({ EditMode = Player (playerName, editedName) } as state) ->
+        { model with State = editPlayerName state playerName editedName }, Cmd.none
+
+    | CancelEdit, ConfiguringSession state ->
+        { model with State = ConfiguringSession { state with EditMode = NoEdit } }, Cmd.none
 
     | _ ->
         model, Cmd.none
@@ -123,12 +141,14 @@ let mainView js createJoinUrl model dispatch =
     | {
         Page = StartPage
         State = ConfiguringSession
-            ({ ConfigName = GameSessionName sessionName; ConfigHost = { Name = PlayerName hostName } }, _)
+            { Config = { ConfigName = GameSessionName sessionName; ConfigHost = { Name = PlayerName hostName } } }
      } ->
         View.startPage true true sessionName hostName dispatch
 
-    | { Page = ConfigurePage; State = ConfiguringSession (config, playerRequests) } ->
-        View.configurePage js config playerRequests (createJoinUrl config.ConfigId) dispatch
+    | { Page = ConfigurePage; State = ConfiguringSession state } ->
+        let joinUrl = createJoinUrl state.Config.ConfigId
+        let isNameValid = isEditedPlayerNameValid state.Config.ConfigPlayers
+        View.configurePage js state joinUrl isNameValid dispatch
 
     | _ -> View.notImplementedPage
 
