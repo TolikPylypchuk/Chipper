@@ -76,15 +76,24 @@ let update storage repo mediator message model =
     | InputPlayerName name, JoiningSession { GameSessionId = id; GameSessionName = sessionName } ->
         let state = JoiningSession { GameSessionId = id; GameSessionName = sessionName; Name = name }
         { model with State = state }, Cmd.none
-        
+
     | RequestAccess joinInfo, JoiningSession player ->
-        mediator |> EventMediator.post (PlayerAccessRequested joinInfo) player.GameSessionId
-        let state = AwaitingJoinConfirmation player
-        { model with State = state }, Cmd.none
-        
+        let validPlayer = player |> createValidPlayer joinInfo
+        let newState = requestAccess mediator joinInfo validPlayer
+        { model with State = newState }, mediator |> createEventLoop player.GameSessionId
+
+    | RequestAccess joinInfo, AwaitingJoinRejected player ->
+        { model with State = requestAccess mediator joinInfo player }, Cmd.none
+
     | ReceiveEvent (PlayerAccessRequested joinInfo), ConfiguringSession state ->
         let newState = { state with PlayerRequests = state.PlayerRequests @ [ joinInfo ] }
         { model with State = ConfiguringSession newState }, Cmd.none
+        
+    | ReceiveEvent (PlayerAccepted playerName), AwaitingJoinConfirmation player when player.ValidName = playerName ->
+        { model with State = AwaitingGameStart player }, Cmd.none
+        
+    | ReceiveEvent (PlayerRejected playerName), AwaitingJoinConfirmation player when player.ValidName = playerName ->
+        { model with State = AwaitingJoinRejected player }, Cmd.none
 
     | SetBettingType bettingType, ConfiguringSession { Config = config } ->
         let config = { config with ConfigBettingType = bettingType }
@@ -101,12 +110,18 @@ let update storage repo mediator message model =
             }
 
         { model with State = ConfiguringSession newState }, Cmd.none
-        
+
+    | AcceptPlayerRequest playerName, ConfiguringSession state ->
+        { model with State = acceptPlayerRequest mediator state playerName }, Cmd.none
+
+    | RejectPlayerRequest playerName, ConfiguringSession state ->
+        { model with State = rejectPlayerRequest mediator state playerName }, Cmd.none
+
     | InputPlayerName editedName, ConfiguringSession ({ EditMode = Player (playerName, _) } as state) ->
         { model with State = ConfiguringSession { state with EditMode = Player (playerName, editedName) } }, Cmd.none
 
     | AcceptEdit, ConfiguringSession ({ EditMode = Player (playerName, editedName) } as state) ->
-        { model with State = editPlayerName state playerName editedName }, Cmd.none
+        { model with State = editPlayerName mediator state playerName editedName }, Cmd.none
 
     | CancelEdit, ConfiguringSession state ->
         { model with State = ConfiguringSession { state with EditMode = NoEdit } }, Cmd.none
@@ -126,14 +141,17 @@ let mainView js createJoinUrl model dispatch =
         let isValid = Model.canSaveSessionName sessionName && Model.canSavePlayerName playerName
         View.startPage isValid false sessionName playerName dispatch
 
-    | { Page = JoinPage _; State = JoiningSession ({ GameSessionName = (GameSessionName name) } as player) } ->
-        View.joinPage name (player |> Model.tryCreateJoinInfo) false dispatch
+    | { Page = JoinPage _; State = JoiningSession player } ->
+        View.joinPage player.GameSessionName (player |> Model.tryCreateJoinInfo) dispatch
+
+    | { Page = JoinPage _; State = AwaitingJoinConfirmation player } ->
+        View.awaitJoinPage player.ValidGameSessionName
         
-    | {
-        Page = JoinPage _
-        State = AwaitingJoinConfirmation ({ GameSessionName = (GameSessionName name) } as player)
-     } ->
-        View.joinPage name (player |> Model.tryCreateJoinInfo) true dispatch
+    | { Page = JoinPage _; State = AwaitingGameStart player } ->
+        View.lobbyPage player.ValidGameSessionName
+        
+    | { Page = JoinPage _; State = AwaitingJoinRejected player } ->
+        View.rejectedJoinPage player.ValidGameSessionName (player |> Model.createJoinInfo) dispatch
 
     | { Page = JoinPage _; State = JoiningInvalidSession } ->
         View.invalidJoinPage

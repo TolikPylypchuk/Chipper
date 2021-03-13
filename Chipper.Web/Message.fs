@@ -23,6 +23,8 @@ type Message =
     | EditPlayerName of PlayerName
     | AcceptEdit
     | CancelEdit
+    | AcceptPlayerRequest of PlayerName
+    | RejectPlayerRequest of PlayerName
 
 [<AutoOpen>]
 module MessageUtil =

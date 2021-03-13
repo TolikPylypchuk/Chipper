@@ -163,8 +163,10 @@ module GameSession =
     let id session = session.Id
     let players session = session.Players
     let raiseType session = session.RaiseType
-    let bettingsType session = session.BettingType
+    let bettingType session = session.BettingType
     let games session = session.Games
+
+    let name (GameSessionName name) = name
 
 [<AutoOpen>]
 module Patterns =

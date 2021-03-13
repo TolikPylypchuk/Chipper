@@ -19,6 +19,12 @@ type JoiningPlayer = {
     Name : string
 }
 
+type ValidJoiningPlayer = {
+    ValidGameSessionId : GameSessionId
+    ValidGameSessionName : GameSessionName
+    ValidName : PlayerName
+}
+
 type PlayerJoinInfo = {
     GameSessionId : GameSessionId
     PlayerName : PlayerName
@@ -39,7 +45,9 @@ type LocalState =
     | AddingSessionName of string * string
     | JoiningSession of JoiningPlayer
     | JoiningInvalidSession
-    | AwaitingJoinConfirmation of JoiningPlayer
+    | AwaitingJoinConfirmation of ValidJoiningPlayer
+    | AwaitingGameStart of ValidJoiningPlayer
+    | AwaitingJoinRejected of ValidJoiningPlayer
     | ConfiguringSession of ConfigSessionState
 
 type Model = {
@@ -62,6 +70,9 @@ module Model =
         match name |> playerName with
         | Ok _ -> true
         | _ -> false
+
+    let createJoinInfo { ValidGameSessionId = id; ValidName = name } =
+        { GameSessionId = id; PlayerName = name; }
 
     let tryCreateJoinInfo { GameSessionId = id; Name = name } =
         name |> playerName |> Result.map (fun playerName -> { GameSessionId = id; PlayerName = playerName })

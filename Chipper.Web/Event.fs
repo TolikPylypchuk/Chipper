@@ -4,6 +4,8 @@ open Chipper.Core.Domain
 
 type Event =
     | PlayerAccessRequested of PlayerJoinInfo
+    | PlayerAccepted of PlayerName
+    | PlayerRejected of PlayerName
     | PlayerRenamed of PlayerName * PlayerName
 
 type GameSessionEvent = {

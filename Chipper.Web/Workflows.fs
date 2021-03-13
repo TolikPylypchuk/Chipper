@@ -72,12 +72,34 @@ let configureSession storage repo model config =
     
     result |> handleAsyncMessageError
 
-let isEditedPlayerNameValid players name =
-    match name |> PlayerName.create with
-    | Ok name -> players |> List.forall (fun (player : Player) -> player.Name <> name)
+let acceptPlayerRequest mediator state playerName =
+    let newPlayer = { Name = playerName; Chips = [] }
+    let playerRequests = state.PlayerRequests |> List.filter (fun joinInfo -> joinInfo.PlayerName <> playerName)
+
+    let newState =
+        { state with
+            Config = { state.Config with ConfigPlayers = state.Config.ConfigPlayers @ [ newPlayer ] }
+            PlayerRequests = playerRequests
+        }
+
+    mediator |> EventMediator.post (PlayerAccepted playerName) newState.Config.ConfigId
+
+    ConfiguringSession newState
+
+let rejectPlayerRequest mediator state playerName =
+    let playerRequests = state.PlayerRequests |> List.filter (fun joinInfo -> joinInfo.PlayerName <> playerName)
+    let newState = { state with PlayerRequests = playerRequests }
+
+    mediator |> EventMediator.post (PlayerRejected playerName) newState.Config.ConfigId
+
+    ConfiguringSession newState
+
+let isEditedPlayerNameValid players originalName editedName =
+    match editedName |> PlayerName.create with
+    | Ok name -> players |> List.forall (fun (player : Player) -> player.Name = originalName || player.Name <> name)
     | _ -> false
 
-let editPlayerName state playerName editedName =
+let editPlayerName mediator state playerName editedName =
     match editedName |> PlayerName.create with
     | Ok newName ->
         let newPlayers =
@@ -90,13 +112,15 @@ let editPlayerName state playerName editedName =
             else state.Config.ConfigHost
 
         let newState =
-            ConfiguringSession {
+            {
                 state with
                     Config = { state.Config with ConfigPlayers = newPlayers; ConfigHost = host }
                     EditMode = NoEdit
             }
 
-        newState
+        mediator |> EventMediator.post (PlayerRenamed (playerName, newName)) newState.Config.ConfigId
+
+        ConfiguringSession newState
     | _ ->
         ConfiguringSession state
 
@@ -127,3 +151,14 @@ let getSessionToJoin id repo =
             SetError e
 
     result |> Async.map asMessage
+
+let createValidPlayer joinInfo (player : JoiningPlayer) =
+    {
+        ValidGameSessionId = player.GameSessionId
+        ValidGameSessionName = player.GameSessionName
+        ValidName = joinInfo.PlayerName
+    }
+
+let requestAccess mediator joinInfo (player : ValidJoiningPlayer) =
+    mediator |> EventMediator.post (PlayerAccessRequested joinInfo) player.ValidGameSessionId
+    AwaitingJoinConfirmation player
