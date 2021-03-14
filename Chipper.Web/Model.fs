@@ -13,23 +13,6 @@ type Page =
     | PlayPage
     | NotImplementedPage
 
-type JoiningPlayer = {
-    GameSessionId : GameSessionId
-    GameSessionName : GameSessionName
-    Name : string
-}
-
-type ValidJoiningPlayer = {
-    ValidGameSessionId : GameSessionId
-    ValidGameSessionName : GameSessionName
-    ValidName : PlayerName
-}
-
-type PlayerJoinInfo = {
-    GameSessionId : GameSessionId
-    PlayerName : PlayerName
-}
-
 type ConfigSessionEditMode =
     | NoEdit
     | Player of PlayerName * string

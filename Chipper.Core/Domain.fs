@@ -76,6 +76,23 @@ type GameSession = private {
     Games : Game list
 }
 
+type JoiningPlayer = {
+    GameSessionId : GameSessionId
+    GameSessionName : GameSessionName
+    Name : string
+}
+
+type ValidJoiningPlayer = {
+    ValidGameSessionId : GameSessionId
+    ValidGameSessionName : GameSessionName
+    ValidName : PlayerName
+}
+
+type PlayerJoinInfo = {
+    GameSessionId : GameSessionId
+    PlayerName : PlayerName
+}
+
 [<RequireQualifiedAccess>]
 module Chip =
 
@@ -110,11 +127,21 @@ module PlayerName =
 module Player =
 
     let chipCounts player = player.Chips |> List.countBy id
-    
+
     let addChips chips player = { player with Chips = player.Chips @ chips |> List.sort }
 
     let removeChips chips player = { player with Chips = player.Chips |> List.except chips }
-    
+
+[<RequireQualifiedAccess>]
+module ValidJoiningPlayer =
+
+    let create joinInfo (player : JoiningPlayer) =
+        {
+            ValidGameSessionId = player.GameSessionId
+            ValidGameSessionName = player.GameSessionName
+            ValidName = joinInfo.PlayerName
+        }
+
 [<RequireQualifiedAccess>]
 module GameSessionName =
     

@@ -14,7 +14,12 @@
     <Compile Include="ToastComponent.fs" />
     <Compile Include="View.fs" />
     <Compile Include="LocalStorage.fs" />
-    <Compile Include="Workflows.fs" />
+    <Compile Include="Env.fs" />
+    <Compile Include="EventFlow.fs" />
+    <Compile Include="Flow.fs" />
+    <Compile Include="GameStartFlow.fs" />
+    <Compile Include="PlayerFlow.fs" />
+    <Compile Include="ConfigFlow.fs" />
     <Compile Include="ChipperApp.fs" />
     <Compile Include="Services.fs" />
     <Compile Include="Program.fs" />

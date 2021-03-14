@@ -2,132 +2,115 @@ module Chipper.Web.ChipperApp
 
 open Microsoft.Extensions.DependencyInjection
 
+open FSharpPlus
+open FSharpPlus.Data
+
 open Elmish
+
 open Flurl
+
 open Bolero
 open Bolero.Html
 
 open Chipper.Core.Domain
 open Chipper.Core.Persistence
-open Chipper.Web.Workflows
 
-let init storage repo =
+let init = monad {
+    let! env = Reader.ask
+
     let model = { Page = HomePage; State = NoState; LocalState = None; IsLoaded = false }
-    let cmd = Cmd.OfAsync.perform (fun () -> getState storage repo) () LoadLocalState
+    let cmd = Cmd.OfAsync.perform (Reader.run Flow.getState) env Message.loadLocalState
 
-    model, cmd
+    return model, cmd
+}
 
-let update storage repo mediator message model =
+let updateGeneric message model =
+    match message with
+    | SetError e -> model |> Flow.setError e |> Env.none
+    | SetPage (JoinPage id as page) -> model |> Flow.setJoinPage id page
+    | SetPage page -> model |> Flow.setPage page |> Env.none
+    | LoadLocalState state -> model |> Flow.loadState state |> Env.none
+    | RecoverLocalState -> model |> Flow.recoverLocalState
+    | IgnoreLocalState -> model |> Flow.ignoreLocalState |> Env.none
+    | ClearLocalState -> model |> Flow.clearLocalState
+    | SetModel model -> model |> Flow.doNothing |> Env.none
+    | ReceiveEvent event -> model |> Flow.receiveEvent event |> Env.none
+
+let updateGameStart message model =
     match message, model.State with
-
-    | SetError e, _ ->
-        printfn "An unhandled error appeared: %O" e
-        model, Cmd.none
-
-    | SetPage (JoinPage id as page), _ ->
-        { model with Page = page }, Cmd.OfAsync.result (repo |> getSessionToJoin id)
-
-    | SetPage page, _ ->
-        { model with Page = page }, Cmd.none
-
-    | LoadLocalState state, _ ->
-        loadState model state
-
-    | RecoverLocalState, _ ->
-        let newModel = { model with LocalState = None }
-        match model.LocalState with
-        | Some (ConfiguringSession { Config = { ConfigId = id } } as state) ->
-            { model with Page = ConfigurePage; State = state; LocalState = None }, mediator |> createEventLoop id
-        | _ -> newModel, Cmd.none
-
-    | IgnoreLocalState, _ ->
-        { model with LocalState = None }, Cmd.none
-
-    | ClearLocalState, _ ->
-        Async.StartImmediate <| storage.ClearState ()
-        { model with LocalState = None }, Cmd.none
-
-    | SetModel model, _ ->
-        model, Cmd.none
-        
     | StartGameSession, ConfiguringSession _ ->
-        { model with Page = StartPage }, Cmd.none
+        model |> GameStartFlow.startSessionWhenConfiguring |> Env.none
 
     | StartGameSession, _ ->
-        { model with Page = StartPage; State = AddingSessionName ("", "") }, Cmd.none
+        model |> GameStartFlow.startSession |> Env.none
 
     | InputSessionName name, AddingSessionName (_, playerName) ->
-        { model with State = AddingSessionName (name, playerName) }, Cmd.none
-
-    | InputPlayerName playerName, AddingSessionName (name, _) ->
-        { model with State = AddingSessionName (name, playerName) }, Cmd.none
+        model |> GameStartFlow.inputSessionName name playerName |> Env.none
 
     | SaveSessionName, AddingSessionName (name, playerName) ->
-        model, Cmd.OfAsync.result <| saveNewSession repo name playerName
+        model |> GameStartFlow.saveSessionName name playerName
+        
+    | SaveSessionName, ConfiguringSession _ ->
+        model |> GameStartFlow.saveSessionNameWhenConfiguring |> Env.none
 
     | SessionSaved config, _ ->
-        let state = ConfiguringSession { Config = config; PlayerRequests = []; EditMode = NoEdit }
-        storage |> setStateSimple state
-        { model with Page = ConfigurePage; State = state }, mediator |> createEventLoop config.ConfigId
+        model |> GameStartFlow.onSessionSaved config
+        
+    | _ ->
+        model |> Flow.doNothing |> Env.none
 
-    | SaveSessionName, ConfiguringSession _ ->
-        { model with Page = ConfigurePage }, Cmd.none
+let updatePlayer message model =
+    match message, model.State with
+    | InputPlayerName playerName, AddingSessionName (name, _) ->
+        model |> PlayerFlow.inputPlayerNameWhenAddingSessionName name playerName |> Env.none
 
     | InputPlayerName name, JoiningSession { GameSessionId = id; GameSessionName = sessionName } ->
-        let state = JoiningSession { GameSessionId = id; GameSessionName = sessionName; Name = name }
-        { model with State = state }, Cmd.none
+        model |> PlayerFlow.inputPlayerNameWhenJoiningSession id sessionName name |> Env.none
 
     | RequestAccess joinInfo, JoiningSession player ->
-        let validPlayer = player |> createValidPlayer joinInfo
-        let newState = requestAccess mediator joinInfo validPlayer
-        { model with State = newState }, mediator |> createEventLoop player.GameSessionId
+        model |> PlayerFlow.requestAccess player joinInfo
 
     | RequestAccess joinInfo, AwaitingJoinRejected player ->
-        { model with State = requestAccess mediator joinInfo player }, Cmd.none
-
-    | ReceiveEvent (PlayerAccessRequested joinInfo), ConfiguringSession state ->
-        let newState = { state with PlayerRequests = state.PlayerRequests @ [ joinInfo ] }
-        { model with State = ConfiguringSession newState }, Cmd.none
-        
-    | ReceiveEvent (PlayerAccepted playerName), AwaitingJoinConfirmation player when player.ValidName = playerName ->
-        { model with State = AwaitingGameStart player }, Cmd.none
-        
-    | ReceiveEvent (PlayerRejected playerName), AwaitingJoinConfirmation player when player.ValidName = playerName ->
-        { model with State = AwaitingJoinRejected player }, Cmd.none
-
-    | SetBettingType bettingType, ConfiguringSession { Config = config } ->
-        let config = { config with ConfigBettingType = bettingType }
-        model, Cmd.OfAsync.result <| configureSession storage repo model config
-
-    | SetRaiseType raiseType, ConfiguringSession { Config = config } ->
-        let config = { config with ConfigRaiseType = raiseType }
-        model, Cmd.OfAsync.result <| configureSession storage repo model config
+        model |> PlayerFlow.requestAccessAgain player joinInfo
 
     | EditPlayerName playerName, ConfiguringSession state ->
-        let newState =
-            { state with
-                EditMode = ConfigSessionEditMode.Player (playerName, playerName |> PlayerName.value)
-            }
-
-        { model with State = ConfiguringSession newState }, Cmd.none
+        model |> PlayerFlow.editPlayerName playerName state |> Env.none
 
     | AcceptPlayerRequest playerName, ConfiguringSession state ->
-        { model with State = acceptPlayerRequest mediator state playerName }, Cmd.none
+        model |> PlayerFlow.acceptPlayerRequest playerName state
 
     | RejectPlayerRequest playerName, ConfiguringSession state ->
-        { model with State = rejectPlayerRequest mediator state playerName }, Cmd.none
+        model |> PlayerFlow.rejectPlayerRequest playerName state
 
     | InputPlayerName editedName, ConfiguringSession ({ EditMode = Player (playerName, _) } as state) ->
-        { model with State = ConfiguringSession { state with EditMode = Player (playerName, editedName) } }, Cmd.none
+        model |> PlayerFlow.inputNameWhenConfiguringSession playerName editedName state |> Env.none
 
-    | AcceptEdit, ConfiguringSession ({ EditMode = Player (playerName, editedName) } as state) ->
-        { model with State = editPlayerName mediator state playerName editedName }, Cmd.none
+    | AcceptPlayerNameEdit, ConfiguringSession ({ EditMode = Player (playerName, editedName) } as state) ->
+        model |> PlayerFlow.acceptPlayerNameEdit playerName editedName state
 
-    | CancelEdit, ConfiguringSession state ->
-        { model with State = ConfiguringSession { state with EditMode = NoEdit } }, Cmd.none
+    | CancelPlayerNameEdit, ConfiguringSession state ->
+        model |> PlayerFlow.cancelPlayerNameEdit state |> Env.none
 
     | _ ->
-        model, Cmd.none
+        model |> Flow.doNothing |> Env.none
+
+let updateConfig message model =
+    match message, model.State with
+    | SetBettingType bettingType, ConfiguringSession { Config = config } ->
+        model |> ConfigFlow.setBettingType bettingType config
+
+    | SetRaiseType raiseType, ConfiguringSession { Config = config } ->
+        model |> ConfigFlow.setRaiseType raiseType config
+
+    | _ ->
+        model |> Flow.doNothing |> Env.none
+
+let update message model =
+    match message with
+    | GenericMessage message -> updateGeneric message model
+    | GameStartMessage message -> updateGameStart message model
+    | PlayerMessage message -> updatePlayer message model
+    | ConfigMessage message -> updateConfig message model
 
 let mainView js createJoinUrl model dispatch =
     match model with
@@ -165,7 +148,7 @@ let mainView js createJoinUrl model dispatch =
 
     | { Page = ConfigurePage; State = ConfiguringSession state } ->
         let joinUrl = createJoinUrl state.Config.ConfigId
-        let isNameValid = isEditedPlayerNameValid state.Config.ConfigPlayers
+        let isNameValid = PlayerFlow.isEditedPlayerNameValid state.Config.ConfigPlayers
         View.configurePage js state joinUrl isNameValid dispatch
 
     | _ -> View.notImplementedPage
@@ -190,8 +173,10 @@ type AppComponent() =
 
         let createJoinUrl = fun (GameSessionId id) -> Url.Combine(settings.UrlRoot, (router.Link <| JoinPage id))
 
-        let init _ = init storage repo
-        let update = update storage repo mediator
+        let env = { Storage = storage; Repo = repo; Mediator = mediator }
+
+        let init _ = Reader.run init env
+        let update = fun message model -> Reader.run (update message model) env
         let view = view this.JSRuntime createJoinUrl
 
         Program.mkProgram init update view

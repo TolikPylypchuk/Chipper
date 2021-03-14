@@ -19,7 +19,7 @@ let homePage dispatch =
                 button [
                     attr.type' "button"
                     attr.class' "btn btn-primary btn-lg"
-                    on.click (fun _ -> dispatch StartGameSession)
+                    on.click (fun _ -> dispatch Message.startGameSession)
                 ] [
                     text "Start playing"
                 ]
@@ -40,7 +40,7 @@ let startPage isValid isReadonly sessionName playerName dispatch =
                     attr.class' "form-control"
                     attr.readonly <| isReadonly
                     attr.placeholder "Your Name"
-                    bind.input.string playerName (InputPlayerName >> dispatch)
+                    bind.input.string playerName (Message.inputPlayerName >> dispatch)
                 ]
             ]
 
@@ -51,7 +51,7 @@ let startPage isValid isReadonly sessionName playerName dispatch =
                     attr.readonly <| isReadonly
                     attr.placeholder "Game Name"
                     attr.aria "describedby" "session-name-help"
-                    bind.input.string sessionName (InputSessionName >> dispatch)
+                    bind.input.string sessionName (Message.inputSessionName >> dispatch)
                 ]
 
                 div [ attr.id "session-name-help"; attr.class' "form-text" ] [
@@ -64,7 +64,7 @@ let startPage isValid isReadonly sessionName playerName dispatch =
                     attr.type' "button"
                     attr.class' "btn btn-primary btn-lg"
                     attr.disabled <| not isValid
-                    on.click (fun _ -> dispatch SaveSessionName)
+                    on.click (fun _ -> dispatch Message.saveSessionName)
                 ] [
                     text "Configure the game"
                 ]
@@ -86,7 +86,7 @@ let joinPage (GameSessionName sessionName) (newPlayer : Result<PlayerJoinInfo, _
                     attr.type' "text"
                     attr.class' "form-control"
                     attr.placeholder "Your Name"
-                    bind.input.string name (InputPlayerName >> dispatch)
+                    bind.input.string name (Message.inputPlayerName >> dispatch)
                 ]
             ]
 
@@ -95,7 +95,10 @@ let joinPage (GameSessionName sessionName) (newPlayer : Result<PlayerJoinInfo, _
                     attr.type' "button"
                     attr.class' "btn btn-primary btn-lg"
                     attr.disabled (not isValid)
-                    on.click (fun _ -> match newPlayer with Ok player -> dispatch <| RequestAccess player | _ -> ())
+                    on.click (fun _ ->
+                        match newPlayer with
+                        | Ok player -> dispatch <| Message.requestAccess player
+                        | _ -> ())
                 ] [
                     text "Request access"
                 ]
@@ -179,7 +182,7 @@ let rejectedJoinPage (GameSessionName sessionName) newPlayer dispatch =
                 button [
                     attr.type' "button"
                     attr.class' "btn btn-primary btn-lg"
-                    on.click (fun _ -> dispatch <| RequestAccess newPlayer)
+                    on.click (fun _ -> dispatch <| Message.requestAccess newPlayer)
                 ] [
                     text "Request access again"
                 ]
@@ -224,7 +227,7 @@ let private configurePagePlayer state (player : Player) name dispatch =
             button [
                 attr.type' "button"
                 attr.class' "btn btn-secondary btn-sm m-1"
-                on.click (fun _ -> dispatch <| EditPlayerName player.Name)
+                on.click (fun _ -> dispatch <| Message.editPlayerName player.Name)
             ] [
                 i [ attr.class' "bi bi-pencil-square" ] []
             ]
@@ -243,7 +246,7 @@ let private configurePageEditedPlayer originalName editedName isPlayerNameValid 
     concat [
         input [
             attr.name "player-name"
-            bind.input.string editedName (dispatch << InputPlayerName)
+            bind.input.string editedName (dispatch << Message.inputPlayerName)
         ]
 
         div [] [
@@ -251,7 +254,7 @@ let private configurePageEditedPlayer originalName editedName isPlayerNameValid 
                 attr.type' "button"
                 attr.class' "btn btn-success btn-sm m-1"
                 attr.disabled (not <| isPlayerNameValid originalName editedName)
-                on.click (fun _ -> dispatch AcceptEdit)
+                on.click (fun _ -> dispatch Message.acceptPlayerNameEdit)
             ] [
                 i [ attr.class' "bi bi-check2-circle" ] []
             ]
@@ -259,7 +262,7 @@ let private configurePageEditedPlayer originalName editedName isPlayerNameValid 
             button [
                 attr.type' "button"
                 attr.class' "btn btn-danger btn-sm m-1"
-                on.click (fun _ -> dispatch CancelEdit)
+                on.click (fun _ -> dispatch Message.cancelPlayerNameEdit)
             ] [
                 i [ attr.class' "bi bi-x-circle" ] []
             ]
@@ -303,7 +306,7 @@ let private configurePagePlayerRequests state dispatch =
                         button [
                             attr.type' "button"
                             attr.class' "btn btn-success btn-sm m-1"
-                            on.click (fun _ -> dispatch <| AcceptPlayerRequest playerName)
+                            on.click (fun _ -> dispatch <| Message.acceptPlayerRequest playerName)
                         ] [
                             i [ attr.class' "bi bi-check2-circle" ] []
                         ]
@@ -311,7 +314,7 @@ let private configurePagePlayerRequests state dispatch =
                         button [
                             attr.type' "button"
                             attr.class' "btn btn-danger btn-sm m-1"
-                            on.click (fun _ -> dispatch <| RejectPlayerRequest playerName)
+                            on.click (fun _ -> dispatch <| Message.rejectPlayerRequest playerName)
                         ] [
                             i [ attr.class' "bi bi-x-circle" ] []
                         ]
@@ -335,7 +338,7 @@ let private configurePageBettingType state dispatch =
                     attr.type' "radio"
                     attr.class' "form-check-input"
                     attr.checked' (state.Config.ConfigBettingType = betType)
-                    bind.change.string (string betType) (fun _ -> dispatch <| SetBettingType betType)
+                    bind.change.string (string betType) (fun _ -> dispatch <| Message.setBettingType betType)
                 ]
 
                 label [ attr.for' inputId; attr.class' "form-check-label" ] [
@@ -360,7 +363,7 @@ let private configurePageRaiseType state dispatch =
                     attr.type' "radio"
                     attr.class' "form-check-input"
                     attr.checked' (state.Config.ConfigRaiseType = raiseType)
-                    bind.change.string (string raiseType) (fun _ -> dispatch <| SetRaiseType raiseType)
+                    bind.change.string (string raiseType) (fun _ -> dispatch <| Message.setRaiseType raiseType)
                 ]
 
                 label [ attr.for' inputId; attr.class' "form-check-label" ] [

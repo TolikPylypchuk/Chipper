@@ -4,11 +4,6 @@ module Chipper.Web.AppRouter
 open System
 open Bolero
 
-let (|Guid|_|) (id : string) =
-    match Guid.TryParse(id) with
-    | true, result -> Some result
-    | _ -> None
-
 let router = {
     getEndPoint = fun model -> model.Page
     setRoute = fun path ->
@@ -20,7 +15,7 @@ let router = {
         | [| "play" |] -> Some PlayPage
         | [| "not-implemented" |] -> Some NotImplementedPage
         | _ -> None
-        |> Option.map SetPage
+        |> Option.map Message.setPage
     getRoute = function
         | HomePage -> "/"
         | StartPage -> "/start"
