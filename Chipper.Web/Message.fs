@@ -16,26 +16,24 @@ type GenericMessage =
 type GameStartMessage =
     | StartGameSession
     | InputSessionName of string
+    | InputPlayerName of string
     | SaveSessionName
     | SessionSaved of GameSessionConfig
-
-type PlayerMessage =
-    | InputPlayerName of string
     | RequestAccess of PlayerJoinInfo
+
+type ConfigMessage =
+    | SetBettingType of BettingType
+    | SetRaiseType of RaiseType
     | EditPlayerName of PlayerName
+    | ConfigInputPlayerName of string
     | AcceptPlayerNameEdit
     | CancelPlayerNameEdit
     | AcceptPlayerRequest of PlayerName
     | RejectPlayerRequest of PlayerName
 
-type ConfigMessage =
-    | SetBettingType of BettingType
-    | SetRaiseType of RaiseType
-
 type Message =
     | GenericMessage of GenericMessage
     | GameStartMessage of GameStartMessage
-    | PlayerMessage of PlayerMessage
     | ConfigMessage of ConfigMessage
 
 [<RequireQualifiedAccess>]
@@ -52,19 +50,19 @@ module Message =
 
     let startGameSession = StartGameSession |> GameStartMessage
     let inputSessionName = InputSessionName >> GameStartMessage
+    let inputPlayerName = InputPlayerName >> GameStartMessage
     let saveSessionName = SaveSessionName |> GameStartMessage
     let sessionSaved = SessionSaved >> GameStartMessage
-
-    let inputPlayerName = InputPlayerName >> PlayerMessage
-    let requestAccess = RequestAccess >> PlayerMessage
-    let editPlayerName = EditPlayerName >> PlayerMessage
-    let acceptPlayerNameEdit = AcceptPlayerNameEdit |> PlayerMessage
-    let cancelPlayerNameEdit = CancelPlayerNameEdit |> PlayerMessage
-    let acceptPlayerRequest = AcceptPlayerRequest >> PlayerMessage
-    let rejectPlayerRequest = RejectPlayerRequest >> PlayerMessage
+    let requestAccess = RequestAccess >> GameStartMessage
 
     let setBettingType = SetBettingType >> ConfigMessage
     let setRaiseType = SetRaiseType >> ConfigMessage
+    let editPlayerName = EditPlayerName >> ConfigMessage
+    let configInputPlayerName = ConfigInputPlayerName >> ConfigMessage
+    let acceptPlayerNameEdit = AcceptPlayerNameEdit |> ConfigMessage
+    let cancelPlayerNameEdit = CancelPlayerNameEdit |> ConfigMessage
+    let acceptPlayerRequest = AcceptPlayerRequest >> ConfigMessage
+    let rejectPlayerRequest = RejectPlayerRequest >> ConfigMessage
 
     let handleError message =
         match message with

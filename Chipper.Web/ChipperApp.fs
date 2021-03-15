@@ -47,6 +47,9 @@ let updateGameStart message model =
     | InputSessionName name, AddingSessionName (_, playerName) ->
         model |> GameStartFlow.inputSessionName name playerName |> Env.none
 
+    | InputPlayerName playerName, AddingSessionName (name, _) ->
+        model |> GameStartFlow.inputPlayerNameWhenAddingSessionName name playerName |> Env.none
+
     | SaveSessionName, AddingSessionName (name, playerName) ->
         model |> GameStartFlow.saveSessionName name playerName
         
@@ -55,41 +58,15 @@ let updateGameStart message model =
 
     | SessionSaved config, _ ->
         model |> GameStartFlow.onSessionSaved config
-        
-    | _ ->
-        model |> Flow.doNothing |> Env.none
-
-let updatePlayer message model =
-    match message, model.State with
-    | InputPlayerName playerName, AddingSessionName (name, _) ->
-        model |> PlayerFlow.inputPlayerNameWhenAddingSessionName name playerName |> Env.none
 
     | InputPlayerName name, JoiningSession { GameSessionId = id; GameSessionName = sessionName } ->
-        model |> PlayerFlow.inputPlayerNameWhenJoiningSession id sessionName name |> Env.none
-
+        model |> GameStartFlow.inputPlayerNameWhenJoiningSession id sessionName name |> Env.none
+        
     | RequestAccess joinInfo, JoiningSession player ->
-        model |> PlayerFlow.requestAccess player joinInfo
+        model |> GameStartFlow.requestAccess player joinInfo
 
     | RequestAccess joinInfo, AwaitingJoinRejected player ->
-        model |> PlayerFlow.requestAccessAgain player joinInfo
-
-    | EditPlayerName playerName, ConfiguringSession state ->
-        model |> PlayerFlow.editPlayerName playerName state |> Env.none
-
-    | AcceptPlayerRequest playerName, ConfiguringSession state ->
-        model |> PlayerFlow.acceptPlayerRequest playerName state
-
-    | RejectPlayerRequest playerName, ConfiguringSession state ->
-        model |> PlayerFlow.rejectPlayerRequest playerName state
-
-    | InputPlayerName editedName, ConfiguringSession ({ EditMode = Player (playerName, _) } as state) ->
-        model |> PlayerFlow.inputNameWhenConfiguringSession playerName editedName state |> Env.none
-
-    | AcceptPlayerNameEdit, ConfiguringSession ({ EditMode = Player (playerName, editedName) } as state) ->
-        model |> PlayerFlow.acceptPlayerNameEdit playerName editedName state
-
-    | CancelPlayerNameEdit, ConfiguringSession state ->
-        model |> PlayerFlow.cancelPlayerNameEdit state |> Env.none
+        model |> GameStartFlow.requestAccessAgain player joinInfo
 
     | _ ->
         model |> Flow.doNothing |> Env.none
@@ -101,6 +78,24 @@ let updateConfig message model =
 
     | SetRaiseType raiseType, ConfiguringSession { Config = config } ->
         model |> ConfigFlow.setRaiseType raiseType config
+        
+    | EditPlayerName playerName, ConfiguringSession state ->
+        model |> ConfigFlow.editPlayerName playerName state |> Env.none
+
+    | AcceptPlayerRequest playerName, ConfiguringSession state ->
+        model |> ConfigFlow.acceptPlayerRequest playerName state
+
+    | RejectPlayerRequest playerName, ConfiguringSession state ->
+        model |> ConfigFlow.rejectPlayerRequest playerName state
+
+    | ConfigInputPlayerName editedName, ConfiguringSession ({ EditMode = Player (playerName, _) } as state) ->
+        model |> ConfigFlow.inputPlayerName playerName editedName state |> Env.none
+
+    | AcceptPlayerNameEdit, ConfiguringSession ({ EditMode = Player (playerName, editedName) } as state) ->
+        model |> ConfigFlow.acceptPlayerNameEdit playerName editedName state
+
+    | CancelPlayerNameEdit, ConfiguringSession state ->
+        model |> ConfigFlow.cancelPlayerNameEdit state |> Env.none
 
     | _ ->
         model |> Flow.doNothing |> Env.none
@@ -109,58 +104,55 @@ let update message model =
     match message with
     | GenericMessage message -> updateGeneric message model
     | GameStartMessage message -> updateGameStart message model
-    | PlayerMessage message -> updatePlayer message model
     | ConfigMessage message -> updateConfig message model
 
 let mainView js createJoinUrl model dispatch =
-    match model with
-    | { IsLoaded = false } ->
-        Empty
-
-    | { Page = HomePage } ->
+    match model.Page, model.State with
+    | (HomePage, _) ->
         View.homePage dispatch
 
-    | { Page = StartPage; State = AddingSessionName (sessionName, playerName) } ->
+    | (StartPage, AddingSessionName (sessionName, playerName)) ->
         let isValid = Model.canSaveSessionName sessionName && Model.canSavePlayerName playerName
         View.startPage isValid false sessionName playerName dispatch
 
-    | { Page = JoinPage _; State = JoiningSession player } ->
+    | (JoinPage _, JoiningSession player) ->
         View.joinPage player.GameSessionName (player |> Model.tryCreateJoinInfo) dispatch
 
-    | { Page = JoinPage _; State = AwaitingJoinConfirmation player } ->
+    | (JoinPage _, AwaitingJoinConfirmation player) ->
         View.awaitJoinPage player.ValidGameSessionName
         
-    | { Page = JoinPage _; State = AwaitingGameStart player } ->
+    | (JoinPage _, AwaitingGameStart player) ->
         View.lobbyPage player.ValidGameSessionName
         
-    | { Page = JoinPage _; State = AwaitingJoinRejected player } ->
+    | (JoinPage _, AwaitingJoinRejected player) ->
         View.rejectedJoinPage player.ValidGameSessionName (player |> Model.createJoinInfo) dispatch
 
-    | { Page = JoinPage _; State = JoiningInvalidSession } ->
+    | (JoinPage _, JoiningInvalidSession) ->
         View.invalidJoinPage
 
-    | {
-        Page = StartPage
-        State = ConfiguringSession
-            { Config = { ConfigName = GameSessionName sessionName; ConfigHost = { Name = PlayerName hostName } } }
-     } ->
+    | (StartPage,
+        ConfiguringSession { Config = { ConfigName = GameSessionName sessionName
+                                        ConfigHost = { Name = PlayerName hostName } } }) ->
         View.startPage true true sessionName hostName dispatch
 
-    | { Page = ConfigurePage; State = ConfiguringSession state } ->
+    | (ConfigurePage, ConfiguringSession state) ->
         let joinUrl = createJoinUrl state.Config.ConfigId
-        let isNameValid = PlayerFlow.isEditedPlayerNameValid state.Config.ConfigPlayers
+        let isNameValid = ConfigFlow.isEditedPlayerNameValid state.Config.ConfigPlayers
         View.configurePage js state joinUrl isNameValid dispatch
 
     | _ -> View.notImplementedPage
 
 let view js createJoinUrl model dispatch =
-    concat [
-        mainView js createJoinUrl model dispatch
+    if model.IsLoaded then
+        concat [
+            mainView js createJoinUrl model dispatch
 
-        match model.LocalState with
-        | Some state -> ToastComponent.localState state dispatch
-        | _ -> empty
-    ]
+            match model.LocalState with
+            | Some state -> ToastComponent.localState state dispatch
+            | _ -> empty
+        ]
+    else
+        Empty
 
 type AppComponent() =
     inherit ProgramComponent<Model, Message>()

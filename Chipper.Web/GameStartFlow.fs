@@ -7,6 +7,7 @@ open FsToolkit.ErrorHandling
 open Elmish
 
 open Chipper.Core
+open Chipper.Core.Domain
 open Chipper.Web
 
 let startSession model =
@@ -17,6 +18,13 @@ let startSessionWhenConfiguring model =
 
 let inputSessionName name playerName model =
     { model with State = AddingSessionName (name, playerName) }, Cmd.none
+
+let inputPlayerNameWhenAddingSessionName name playerName model =
+    { model with State = AddingSessionName (name, playerName) }, Cmd.none
+
+let inputPlayerNameWhenJoiningSession id sessionName name model =
+    let state = JoiningSession { GameSessionId = id; GameSessionName = sessionName; Name = name }
+    { model with State = state }, Cmd.none
 
 let saveNewSession name playerName' = monad {
     let! repo = Env.askRepo
@@ -47,4 +55,22 @@ let onSessionSaved config model = monad {
     let! loop = Flow.createEventLoop config.ConfigId
 
     return { model with Page = ConfigurePage; State = state }, loop
+}
+    
+let private doRequestAccess player joinInfo = monad {
+    let! mediator = Env.askMediator
+    mediator |> EventMediator.post (PlayerAccessRequested joinInfo) player.ValidGameSessionId
+    return AwaitingJoinConfirmation player
+}
+
+let requestAccess player joinInfo model = monad {
+    let validPlayer = player |> ValidJoiningPlayer.create joinInfo
+    let! newState = doRequestAccess validPlayer joinInfo
+    let! loop = Flow.createEventLoop player.GameSessionId
+    return { model with State = newState }, loop
+}
+
+let requestAccessAgain player joinInfo model = monad {
+    let! newState = doRequestAccess player joinInfo
+    return { model with State = newState }, Cmd.none
 }
