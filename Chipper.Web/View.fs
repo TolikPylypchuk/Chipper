@@ -138,33 +138,41 @@ let invalidJoinPage =
         ]
     ]
 
-let lobbyPage (GameSessionName sessionName) =
-    div [ attr.class' "h-100 d-flex align-items-center" ] [
-        div [ attr.class' "container" ] [
-            h2 [ attr.class' "display-4 m-lg-4 m-md-3 m-2 text-center" ] [
-                text <| "Join " + sessionName
-            ]
-
-            p [ attr.class' "lead text-center" ] [
-                text "You were accepted!"
-            ]
-
-            div [ attr.class' "text-center" ] [
-                div [ attr.class' "progress m-4" ] [
-                    div [
-                        attr.class' "progress-bar progress-bar-striped progress-bar-animated w-100"
-                        attr.role "progressbar"
-                        attr.aria "valuenow" 50
-                        attr.aria "valuemin" 0
-                        attr.aria "valuemax" 100
-                    ] []
+let lobbyPage (GameSessionName sessionName) renameInfo dispatch =
+    concat [
+        div [ attr.class' "h-100 d-flex align-items-center" ] [
+            div [ attr.class' "container" ] [
+                h2 [ attr.class' "display-4 m-lg-4 m-md-3 m-2 text-center" ] [
+                    text <| "Join " + sessionName
                 ]
 
-                p [] [
-                    text "Now waiting for the game to start . . ."
+                p [ attr.class' "lead text-center" ] [
+                    text "You were accepted!"
+                ]
+
+                div [ attr.class' "text-center" ] [
+                    div [ attr.class' "progress m-4" ] [
+                        div [
+                            attr.class' "progress-bar progress-bar-striped progress-bar-animated w-100"
+                            attr.role "progressbar"
+                            attr.aria "valuenow" 50
+                            attr.aria "valuemin" 0
+                            attr.aria "valuemax" 100
+                        ] []
+                    ]
+
+                    p [] [
+                        text "Now waiting for the game to start . . ."
+                    ]
                 ]
             ]
         ]
+
+        cond renameInfo <| function
+            | Some renameInfo ->
+                ToastComponent.playerRenamedNotification (renameInfo.HostName, renameInfo.NewName) dispatch
+            | None ->
+                empty
     ]
 
 let rejectedJoinPage (GameSessionName sessionName) newPlayer wasAlreadyAdded dispatch =    
@@ -249,7 +257,7 @@ let private configurePageEditedPlayer originalName editedName isPlayerNameValid 
     concat [
         input [
             attr.name "player-name"
-            bind.input.string editedName (dispatch << Message.inputPlayerName)
+            bind.input.string editedName (dispatch << Message.configInputPlayerName)
         ]
 
         div [] [

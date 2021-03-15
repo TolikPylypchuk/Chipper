@@ -74,3 +74,6 @@ let requestAccessAgain player joinInfo model = monad {
     let! newState = doRequestAccess player joinInfo
     return { model with State = newState }, Cmd.none
 }
+
+let acceptRename player model =
+    { model with State = AwaitingGameStart player }, Cmd.none

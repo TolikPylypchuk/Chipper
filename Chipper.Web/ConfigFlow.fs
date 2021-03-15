@@ -79,7 +79,8 @@ let private doAcceptPlayerNameEdit playerName newName state = monad {
                 EditMode = NoEdit
         }
 
-    do! Env.askMediator |>> EventMediator.post (PlayerRenamed (playerName, newName)) newState.Config.ConfigId
+    let renameInfo =  { HostName = newState.Config.ConfigHost.Name; OldName = playerName; NewName = newName }
+    do! Env.askMediator |>> EventMediator.post (PlayerRenamed renameInfo) newState.Config.ConfigId
 
     return ConfiguringSession newState
 }

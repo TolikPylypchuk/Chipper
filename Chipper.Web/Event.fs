@@ -6,7 +6,7 @@ type Event =
     | PlayerAccessRequested of PlayerJoinInfo
     | PlayerAccepted of PlayerName
     | PlayerRejected of PlayerName
-    | PlayerRenamed of PlayerName * PlayerName
+    | PlayerRenamed of PlayerRenameInfo
     | PlayerRemoved of PlayerName
 
 type GameSessionEvent = {

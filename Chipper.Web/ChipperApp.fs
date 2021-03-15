@@ -52,7 +52,7 @@ let updateGameStart message model =
 
     | SaveSessionName, AddingSessionName (name, playerName) ->
         model |> GameStartFlow.saveSessionName name playerName
-        
+
     | SaveSessionName, ConfiguringSession _ ->
         model |> GameStartFlow.saveSessionNameWhenConfiguring |> Env.none
 
@@ -61,12 +61,15 @@ let updateGameStart message model =
 
     | InputPlayerName name, JoiningSession { GameSessionId = id; GameSessionName = sessionName } ->
         model |> GameStartFlow.inputPlayerNameWhenJoiningSession id sessionName name |> Env.none
-        
+
     | RequestAccess joinInfo, JoiningSession player ->
         model |> GameStartFlow.requestAccess player joinInfo
 
     | RequestAccess joinInfo, (AwaitingJoinRejected player | AwaitingGameStartRemoved player) ->
         model |> GameStartFlow.requestAccessAgain player joinInfo
+
+    | AcceptRename, AwaitingGameStartRenamed (player, _) ->
+        model |> GameStartFlow.acceptRename player |> Env.none
 
     | _ ->
         model |> Flow.doNothing |> Env.none
@@ -111,37 +114,43 @@ let update message model =
 
 let mainView js createJoinUrl model dispatch =
     match model.Page, model.State with
-    | (HomePage, _) ->
+    | HomePage, _ ->
         View.homePage dispatch
 
-    | (StartPage, AddingSessionName (sessionName, playerName)) ->
+    | StartPage, AddingSessionName (sessionName, playerName) ->
         let isValid = Model.canSaveSessionName sessionName && Model.canSavePlayerName playerName
         View.startPage isValid false sessionName playerName dispatch
+        
+    | JoinPage _, NoState ->
+        empty
 
-    | (JoinPage _, JoiningSession player) ->
+    | JoinPage _, JoiningSession player ->
         View.joinPage player.GameSessionName (player |> Model.tryCreateJoinInfo) dispatch
 
-    | (JoinPage _, AwaitingJoinConfirmation player) ->
+    | JoinPage _, AwaitingJoinConfirmation player ->
         View.awaitJoinPage player.ValidGameSessionName
-        
-    | (JoinPage _, AwaitingGameStart player) ->
-        View.lobbyPage player.ValidGameSessionName
-        
-    | (JoinPage _, AwaitingJoinRejected player) ->
+
+    | JoinPage _, AwaitingGameStart player ->
+        View.lobbyPage player.ValidGameSessionName None dispatch
+
+    | JoinPage _, AwaitingGameStartRenamed (player, renameInfo) ->
+        View.lobbyPage player.ValidGameSessionName (Some renameInfo) dispatch
+
+    | JoinPage _, AwaitingJoinRejected player ->
         View.rejectedJoinPage player.ValidGameSessionName (player |> Model.createJoinInfo) false dispatch
-        
-    | (JoinPage _, AwaitingGameStartRemoved player) ->
+
+    | JoinPage _, AwaitingGameStartRemoved player ->
         View.rejectedJoinPage player.ValidGameSessionName (player |> Model.createJoinInfo) true dispatch
 
-    | (JoinPage _, JoiningInvalidSession) ->
+    | JoinPage _, JoiningInvalidSession ->
         View.invalidJoinPage
 
-    | (StartPage,
-        ConfiguringSession { Config = { ConfigName = GameSessionName sessionName
-                                        ConfigHost = { Name = PlayerName hostName } } }) ->
+    | StartPage,
+      ConfiguringSession { Config = { ConfigName = GameSessionName sessionName
+                                      ConfigHost = { Name = PlayerName hostName } } } ->
         View.startPage true true sessionName hostName dispatch
 
-    | (ConfigurePage, ConfiguringSession state) ->
+    | ConfigurePage, ConfiguringSession state ->
         let joinUrl = createJoinUrl state.Config.ConfigId
         let isNameValid = ConfigFlow.isEditedPlayerNameValid state.Config.ConfigPlayers
         View.configurePage js state joinUrl isNameValid dispatch
@@ -158,7 +167,7 @@ let view js createJoinUrl model dispatch =
             | _ -> empty
         ]
     else
-        Empty
+        empty
 
 type AppComponent() =
     inherit ProgramComponent<Model, Message>()

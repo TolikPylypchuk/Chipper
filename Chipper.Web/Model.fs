@@ -23,6 +23,12 @@ type ConfigSessionState = {
     EditMode : ConfigSessionEditMode
 }
 
+type PlayerRenameInfo = {
+    HostName : PlayerName
+    OldName : PlayerName
+    NewName : PlayerName
+}
+
 type LocalState =
     | NoState
     | AddingSessionName of string * string
@@ -32,6 +38,7 @@ type LocalState =
     | AwaitingGameStart of ValidJoiningPlayer
     | AwaitingJoinRejected of ValidJoiningPlayer
     | AwaitingGameStartRemoved of ValidJoiningPlayer
+    | AwaitingGameStartRenamed of ValidJoiningPlayer * PlayerRenameInfo
     | ConfiguringSession of ConfigSessionState
 
 type Model = {

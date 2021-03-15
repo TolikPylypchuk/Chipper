@@ -20,6 +20,7 @@ type GameStartMessage =
     | SaveSessionName
     | SessionSaved of GameSessionConfig
     | RequestAccess of PlayerJoinInfo
+    | AcceptRename
 
 type ConfigMessage =
     | SetBettingType of BettingType
@@ -55,6 +56,7 @@ module Message =
     let saveSessionName = SaveSessionName |> GameStartMessage
     let sessionSaved = SessionSaved >> GameStartMessage
     let requestAccess = RequestAccess >> GameStartMessage
+    let acceptRename = AcceptRename |> GameStartMessage
 
     let setBettingType = SetBettingType >> ConfigMessage
     let setRaiseType = SetRaiseType >> ConfigMessage

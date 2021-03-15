@@ -13,11 +13,9 @@ open Chipper.Core.Domain
 type Toast<'model, 'message> = {
     Header : 'model -> Node
     Body : 'model -> Node
-    AcceptText : string
-    CancelText : string
-    OnAccept : 'message
-    OnCancel : 'message
-    OnClose : 'message
+    Accept : string * 'message
+    Cancel : (string * 'message) option
+    Close : 'message
 }
 
 [<RequireQualifiedAccess>]
@@ -29,18 +27,26 @@ module Toast =
             Body =
                 function
                 | ConfiguringSession { Config = { ConfigName = GameSessionName sessionName } } ->
-                    text <| sprintf
-                        "It appears that you were previously configuring a game: %s. Would you like to continue?"
-                        sessionName
+                    text <|
+                        $"It appears that you were previously configuring a game: {sessionName}. " +
+                        "Would you like to continue?"
                 | _ ->
-                    text "Uh, I got confused and showed you this message by mistake. Oops"
+                    text "Uh, I got confused and showed you this message by mistake. Nevermind"
 
-            AcceptText = "Continue"
-            CancelText = "Forget it"
+            Accept = "Continue", Message.recoverLocalState
+            Cancel = Some ("Forget it", Message.clearLocalState)
+            Close = Message.ignoreLocalState
+        }
 
-            OnAccept = RecoverLocalState
-            OnCancel = ClearLocalState
-            OnClose = IgnoreLocalState
+    let playerRenamedNotification =
+        {
+            Header = fun _ -> text "You were renamed"
+            Body = fun (PlayerName hostName, PlayerName newPlayerName) ->
+                text $"{hostName} renamed you to {newPlayerName}"
+
+            Accept = "OK", Message.acceptRename
+            Cancel = None
+            Close = Message.acceptRename
         }
 
 type ToastComponent<'model, 'message> () =
@@ -74,7 +80,7 @@ type ToastComponent<'model, 'message> () =
                         attr.class' "btn-close"
                         attr.bs "dismiss" "toast"
                         attr.aria "label" "Close"
-                        on.click (fun _ -> dispatch this.Toast.OnClose)
+                        on.click (fun _ -> dispatch this.Toast.Close)
                     ] []
                 ]
 
@@ -82,20 +88,24 @@ type ToastComponent<'model, 'message> () =
                     this.Toast.Body model
 
                     div [ attr.class' "mt-2 pt-2 border-top" ] [
+                        let acceptText, onAccept = this.Toast.Accept
                         button [
                             attr.type' "button"
                             attr.class' "btn btn-primary btn-sm"
-                            on.click (fun _ -> dispatch this.Toast.OnAccept) ] [
-                            text this.Toast.AcceptText
+                            on.click (fun _ -> dispatch onAccept) ] [
+                            text acceptText
                         ]
 
-                        button [
-                            attr.type' "button"
-                            attr.class' "btn btn-secondary btn-sm ms-2"
-                            attr.bs "dismiss" "toast"
-                            on.click (fun _ -> dispatch this.Toast.OnCancel) ] [
-                            text this.Toast.CancelText
-                        ]
+                        cond this.Toast.Cancel <| function
+                            | Some (cancelText, onCancel) ->
+                                button [
+                                    attr.type' "button"
+                                    attr.class' "btn btn-secondary btn-sm ms-2"
+                                    attr.bs "dismiss" "toast"
+                                    on.click (fun _ -> dispatch onCancel) ] [
+                                    text cancelText
+                                ]
+                            | _ -> empty
                     ]
                 ]
             ]
@@ -112,3 +122,9 @@ module ToastComponent =
     let localState =
         let tc = Unchecked.defaultof<ToastComponent<_, _>>
         ecomp<ToastComponent<LocalState, Message>, LocalState, Message> [ (nameof tc.Toast) => Toast.localState ]
+
+    let playerRenamedNotification =
+        let tc = Unchecked.defaultof<ToastComponent<_, _>>
+        ecomp<ToastComponent<PlayerName * PlayerName, Message>, PlayerName * PlayerName, Message> [
+            (nameof tc.Toast) => Toast.playerRenamedNotification
+        ]
