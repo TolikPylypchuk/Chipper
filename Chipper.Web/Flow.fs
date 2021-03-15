@@ -128,6 +128,9 @@ let receiveEvent event model =
 
     | PlayerRejected playerName, AwaitingJoinConfirmation player when player.ValidName = playerName ->
         model |> EventFlow.onPlayerRejected player
+        
+    | PlayerRemoved playerName, AwaitingGameStart player when player.ValidName = playerName ->
+        model |> EventFlow.onPlayerRemoved player
 
     | _ ->
         model |> doNothing

@@ -9,6 +9,7 @@ open Elmish
 open Chipper.Core
 open Chipper.Core.Domain
 open Chipper.Core.Persistence
+open Chipper.Web
 
 let private configureSession config model = monad {
     let! storage = Env.askStorage
@@ -99,3 +100,12 @@ let isEditedPlayerNameValid players originalName editedName =
     match editedName |> PlayerName.create with
     | Ok name -> players |> List.forall (fun (player : Player) -> player.Name = originalName || player.Name <> name)
     | _ -> false
+
+let removePlayer playerName state model = monad {
+    let players = state.Config.ConfigPlayers |> List.filter (fun player -> player.Name <> playerName)
+    let newState = { state with Config = { state.Config with ConfigPlayers = players } }
+    
+    do! Env.askMediator |>> EventMediator.post (PlayerRemoved playerName) newState.Config.ConfigId
+
+    return { model with State = ConfiguringSession newState }, Cmd.none
+}

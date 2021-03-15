@@ -7,6 +7,7 @@ type Event =
     | PlayerAccepted of PlayerName
     | PlayerRejected of PlayerName
     | PlayerRenamed of PlayerName * PlayerName
+    | PlayerRemoved of PlayerName
 
 type GameSessionEvent = {
     GameSessionId : GameSessionId

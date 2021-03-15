@@ -31,6 +31,7 @@ type LocalState =
     | AwaitingJoinConfirmation of ValidJoiningPlayer
     | AwaitingGameStart of ValidJoiningPlayer
     | AwaitingJoinRejected of ValidJoiningPlayer
+    | AwaitingGameStartRemoved of ValidJoiningPlayer
     | ConfiguringSession of ConfigSessionState
 
 type Model = {

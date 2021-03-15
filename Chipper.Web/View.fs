@@ -167,7 +167,7 @@ let lobbyPage (GameSessionName sessionName) =
         ]
     ]
 
-let rejectedJoinPage (GameSessionName sessionName) newPlayer dispatch =    
+let rejectedJoinPage (GameSessionName sessionName) newPlayer wasAlreadyAdded dispatch =    
     div [ attr.class' "h-100 d-flex align-items-center" ] [
         div [ attr.class' "container" ] [
             h2 [ attr.class' "display-4 m-lg-4 m-md-3 m-2 text-center" ] [
@@ -175,7 +175,9 @@ let rejectedJoinPage (GameSessionName sessionName) newPlayer dispatch =
             ]
 
             p [ attr.class' "lead text-center" ] [
-                text "You were rejected!"
+                cond wasAlreadyAdded <| function
+                    | true -> text "You were removed from the game!"
+                    | false -> text "You were rejected!"
             ]
 
             div [ attr.class' "text-center m-4" ] [
@@ -236,6 +238,7 @@ let private configurePagePlayer state (player : Player) name dispatch =
                 attr.type' "button"
                 attr.class' "btn btn-danger btn-sm m-1"
                 attr.disabled (player.Name = state.Config.ConfigHost.Name)
+                on.click (fun _ -> dispatch <| Message.removePlayer player.Name)
             ] [
                 i [ attr.class' "bi bi-x-circle" ] []
             ]

@@ -11,3 +11,6 @@ let onPlayerAccepted player model =
 
 let onPlayerRejected player model =
     { model with State = AwaitingJoinRejected player }, Cmd.none
+
+let onPlayerRemoved player model =
+    { model with State = AwaitingGameStartRemoved player }, Cmd.none

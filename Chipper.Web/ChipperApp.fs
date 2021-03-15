@@ -65,7 +65,7 @@ let updateGameStart message model =
     | RequestAccess joinInfo, JoiningSession player ->
         model |> GameStartFlow.requestAccess player joinInfo
 
-    | RequestAccess joinInfo, AwaitingJoinRejected player ->
+    | RequestAccess joinInfo, (AwaitingJoinRejected player | AwaitingGameStartRemoved player) ->
         model |> GameStartFlow.requestAccessAgain player joinInfo
 
     | _ ->
@@ -96,6 +96,9 @@ let updateConfig message model =
 
     | CancelPlayerNameEdit, ConfiguringSession state ->
         model |> ConfigFlow.cancelPlayerNameEdit state |> Env.none
+        
+    | RemovePlayer playerName, ConfiguringSession state ->
+        model |> ConfigFlow.removePlayer playerName state
 
     | _ ->
         model |> Flow.doNothing |> Env.none
@@ -125,7 +128,10 @@ let mainView js createJoinUrl model dispatch =
         View.lobbyPage player.ValidGameSessionName
         
     | (JoinPage _, AwaitingJoinRejected player) ->
-        View.rejectedJoinPage player.ValidGameSessionName (player |> Model.createJoinInfo) dispatch
+        View.rejectedJoinPage player.ValidGameSessionName (player |> Model.createJoinInfo) false dispatch
+        
+    | (JoinPage _, AwaitingGameStartRemoved player) ->
+        View.rejectedJoinPage player.ValidGameSessionName (player |> Model.createJoinInfo) true dispatch
 
     | (JoinPage _, JoiningInvalidSession) ->
         View.invalidJoinPage

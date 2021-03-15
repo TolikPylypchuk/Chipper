@@ -30,6 +30,7 @@ type ConfigMessage =
     | CancelPlayerNameEdit
     | AcceptPlayerRequest of PlayerName
     | RejectPlayerRequest of PlayerName
+    | RemovePlayer of PlayerName
 
 type Message =
     | GenericMessage of GenericMessage
@@ -63,6 +64,7 @@ module Message =
     let cancelPlayerNameEdit = CancelPlayerNameEdit |> ConfigMessage
     let acceptPlayerRequest = AcceptPlayerRequest >> ConfigMessage
     let rejectPlayerRequest = RejectPlayerRequest >> ConfigMessage
+    let removePlayer = RemovePlayer >> ConfigMessage
 
     let handleError message =
         match message with
