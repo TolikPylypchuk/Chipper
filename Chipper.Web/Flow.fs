@@ -27,22 +27,60 @@ let asMessage page =
     | Error e ->
         Message.setError e
 
+let private getConfigSessionState repo config = async {
+    match! repo |> getSession config.ConfigId with
+    | Ok (ConfigurableSession config) ->
+        let state = { Config = config; PlayerRequests = []; EditMode = NoEdit }
+        return ConfiguringSession state |> Some
+    | _ ->
+        return None
+}
+
+let private getJoinConfirmationState repo player = async {
+    match! repo |> getSession player.ValidGameSessionId with
+    | Ok (ConfigurableSession config) ->
+        let player =
+            { player with
+                ValidGameSessionId = config.ConfigId
+                ValidGameSessionName = config.ConfigName
+            }
+
+        let localState =
+            if config.ConfigPlayers |> List.exists (fun player' -> player'.Name = player.ValidName)
+            then AwaitingGameStart player
+            else AwaitingJoinConfirmation player
+
+        return Some localState
+    | _ ->
+        return None
+}
+
+let private getGameStartState repo player = async {
+    match! repo |> getSession player.ValidGameSessionId with
+    | Ok (ConfigurableSession config) ->
+        let player =
+            { player with
+                ValidGameSessionId = config.ConfigId
+                ValidGameSessionName = config.ConfigName
+            }
+
+        return Some <| AwaitingGameStart player
+    | _ ->
+        return None
+}
+
 let getState = monad {
     let! storage = Env.askStorage
     let! repo = Env.askRepo
 
     return async {
         let! localState = storage.GetState ()
-        let! currentState = async {
+        let! currentState =
             match localState with
-            | ConfiguringSession { Config = config } ->
-                match! repo |> getSession config.ConfigId with
-                | Ok (ConfigurableSession config) ->
-                    let state = { Config = config; PlayerRequests = []; EditMode = NoEdit }
-                    return ConfiguringSession state |> Some
-                | _ -> return None
-            | _ -> return None
-        }
+            | ConfiguringSession { Config = config } -> config |> getConfigSessionState repo
+            | AwaitingJoinConfirmation player -> player |> getJoinConfirmationState repo
+            | AwaitingGameStart player -> player |> getGameStartState repo
+            | _ -> async.Return None
 
         match currentState with
         | Some state ->
@@ -54,6 +92,12 @@ let getState = monad {
             return NoState
     }
 }
+
+let setStateSimple state =
+    Env.askStorage |>> fun storage -> storage.SetState state |> Async.StartImmediate
+
+let clearStateSimple =
+    Env.askStorage |>> fun storage -> storage.ClearState () |> Async.StartImmediate
 
 let getSessionToJoin id = monad {
     let! repo = Env.askRepo
@@ -81,30 +125,36 @@ let setJoinPage id page model = monad {
     return { model with Page = page }, Cmd.OfAsync.result session
 }
 
-let loadState state model =
-    match model.Page, state with
-    | StartPage, state ->
-        { model with State = AddingSessionName ("", ""); LocalState = Some state; IsLoaded = true }, Cmd.none
-    | JoinPage _, NoState ->
-        { model with LocalState = None; IsLoaded = true }, Cmd.none
-    | JoinPage _, state ->
-        { model with LocalState = Some state; IsLoaded = true }, Cmd.none
-    | ConfigurePage, (ConfiguringSession _ as state) ->
-        { model with State = state; LocalState = None; IsLoaded = true }, Cmd.none
-    | _, NoState ->
-        { model with Page = HomePage; LocalState = None; IsLoaded = true }, Cmd.none
-    | _ ->
-        { model with Page = HomePage; LocalState = Some state; IsLoaded = true }, Cmd.none
-
 let createEventLoop id = monad {
     let! mediator = Env.askMediator
     return Cmd.ofSub (fun dispatch -> mediator |> EventMediator.subscribe id (Message.receiveEvent >> dispatch))
 }
 
+let loadState state model =
+    match model.Page, state with
+    | StartPage, state ->
+        let newState = AddingSessionName ("", "")
+        ({ model with State = newState; LocalState = Some state; IsLoaded = true }, Cmd.none) |> Env.none
+    | JoinPage _, NoState ->
+        ({ model with LocalState = None; IsLoaded = true }, Cmd.none) |> Env.none
+    | JoinPage _, (AwaitingJoinConfirmation player | AwaitingGameStart player as state) ->
+        let id = player.ValidGameSessionId
+        createEventLoop id |>> fun loop -> { model with State = state; LocalState = None; IsLoaded = true }, loop
+    | ConfigurePage, (ConfiguringSession { Config = { ConfigId = id } } as state) ->
+        createEventLoop id |>> fun loop -> { model with State = state; LocalState = None; IsLoaded = true }, loop
+    | _, NoState ->
+        ({ model with Page = HomePage; LocalState = None; IsLoaded = true }, Cmd.none) |> Env.none
+    | _ ->
+        ({ model with Page = HomePage; LocalState = Some state; IsLoaded = true }, Cmd.none) |> Env.none
+
 let recoverLocalState model =
     match model.LocalState with
     | Some (ConfiguringSession { Config = { ConfigId = id } } as state) ->
         createEventLoop id |>> fun loop -> { model with Page = ConfigurePage; State = state; LocalState = None }, loop
+    | Some (AwaitingJoinConfirmation player | AwaitingGameStart player as state) ->
+        createEventLoop player.ValidGameSessionId |>> fun loop ->
+            let (GameSessionId rawId) = player.ValidGameSessionId
+            { model with Page = JoinPage rawId; State = state; LocalState = None }, loop
     | _ ->
         ({ model with LocalState = None }, Cmd.none) |> Env.none
 
@@ -116,25 +166,3 @@ let clearLocalState model = monad {
     Async.StartImmediate <| storage.ClearState ()
     return model |> ignoreLocalState
 }
-
-let receiveEvent event model =
-    match event, model.State with
-    | PlayerAccessRequested joinInfo, ConfiguringSession state ->
-        model |> EventFlow.onPlayerAccessRequested state joinInfo
-
-    | PlayerAccepted playerName, AwaitingJoinConfirmation player when player.ValidName = playerName ->
-        model |> EventFlow.onPlayerAccepted player
-
-    | PlayerRejected playerName, AwaitingJoinConfirmation player when player.ValidName = playerName ->
-        model |> EventFlow.onPlayerRejected player
-
-    | PlayerRenamed renameInfo, AwaitingGameStart player when player.ValidName = renameInfo.OldName ->
-        model |> EventFlow.onPlayerRenamed player renameInfo
-
-    | PlayerRemoved playerName, AwaitingGameStart player when player.ValidName = playerName ->
-        model |> EventFlow.onPlayerRemoved player
-
-    | _ ->
-        model |> doNothing
-
-let setStateSimple state = Env.askStorage |>> fun storage -> storage.SetState state |> Async.StartImmediate

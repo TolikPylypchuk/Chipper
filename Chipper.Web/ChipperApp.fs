@@ -25,16 +25,27 @@ let init = monad {
 }
 
 let updateGeneric message model =
-    match message with
-    | SetError e -> model |> Flow.setError e |> Env.none
-    | SetPage (JoinPage id as page) -> model |> Flow.setJoinPage id page
-    | SetPage page -> model |> Flow.setPage page |> Env.none
-    | LoadLocalState state -> model |> Flow.loadState state |> Env.none
-    | RecoverLocalState -> model |> Flow.recoverLocalState
-    | IgnoreLocalState -> model |> Flow.ignoreLocalState |> Env.none
-    | ClearLocalState -> model |> Flow.clearLocalState
-    | SetModel model -> model |> Flow.doNothing |> Env.none
-    | ReceiveEvent event -> model |> Flow.receiveEvent event |> Env.none
+    match message, model.State with
+    | SetError e, _ ->
+        model |> Flow.setError e |> Env.none
+    | SetPage (JoinPage id as page), (AwaitingJoinConfirmation _ | AwaitingGameStart _)  ->
+        model |> Flow.setPage page |> Env.none
+    | SetPage (JoinPage id as page), _  ->
+        model |> Flow.setJoinPage id page
+    | SetPage page, _  ->
+        model |> Flow.setPage page |> Env.none
+    | LoadLocalState state, _  ->
+        model |> Flow.loadState state
+    | RecoverLocalState, _  ->
+        model |> Flow.recoverLocalState
+    | IgnoreLocalState, _  ->
+        model |> Flow.ignoreLocalState |> Env.none
+    | ClearLocalState, _  ->
+        model |> Flow.clearLocalState
+    | SetModel model, _  ->
+        model |> Flow.doNothing |> Env.none
+    | ReceiveEvent event, _  ->
+        model |> EventFlow.receiveEvent event
 
 let updateGameStart message model =
     match message, model.State with

@@ -30,8 +30,16 @@ module Toast =
                     text <|
                         $"It appears that you were previously configuring a game: {sessionName}. " +
                         "Would you like to continue?"
+                | AwaitingJoinConfirmation { ValidGameSessionName = GameSessionName sessionName } ->
+                    text <|
+                        $"It appears that you were previously trying to join a game: {sessionName}. " +
+                        "Would you like to continue?"
+                | AwaitingGameStart { ValidGameSessionName = GameSessionName sessionName } ->
+                    text <|
+                        $"It appears that you were previously waiting to start a game: {sessionName}. " +
+                        "Would you like to continue?"
                 | _ ->
-                    text "Uh, I got confused and showed you this message by mistake. Nevermind"
+                    text "Uh, I got confused and showed you this message by mistake. Carry on"
 
             Accept = "Continue", Message.recoverLocalState
             Cancel = Some ("Forget it", Message.clearLocalState)

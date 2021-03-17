@@ -56,7 +56,7 @@ let onSessionSaved config model = monad {
 
     return { model with Page = ConfigurePage; State = state }, loop
 }
-    
+
 let private doRequestAccess player joinInfo = monad {
     let! mediator = Env.askMediator
     mediator |> EventMediator.post (PlayerAccessRequested joinInfo) player.ValidGameSessionId
@@ -64,9 +64,13 @@ let private doRequestAccess player joinInfo = monad {
 }
 
 let requestAccess player joinInfo model = monad {
+    let! storage = Env.askStorage
     let validPlayer = player |> ValidJoiningPlayer.create joinInfo
     let! newState = doRequestAccess validPlayer joinInfo
+
     let! loop = Flow.createEventLoop player.GameSessionId
+    Async.StartImmediate <| storage.SetState newState
+
     return { model with State = newState }, loop
 }
 

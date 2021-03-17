@@ -15,8 +15,8 @@
     <Compile Include="View.fs" />
     <Compile Include="LocalStorage.fs" />
     <Compile Include="Env.fs" />
-    <Compile Include="EventFlow.fs" />
     <Compile Include="Flow.fs" />
+    <Compile Include="EventFlow.fs" />
     <Compile Include="GameStartFlow.fs" />
     <Compile Include="ConfigFlow.fs" />
     <Compile Include="ChipperApp.fs" />
