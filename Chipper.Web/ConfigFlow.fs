@@ -11,25 +11,25 @@ open Chipper.Core.Domain
 open Chipper.Core.Persistence
 open Chipper.Web
 
-let private configureSession config model = monad {
+let private updateSession state model = monad {
     let! storage = Env.askStorage
     let! repo = Env.askRepo
 
     let result = asyncResult {
-        do! repo |> updateSession (ConfigurableSession config)
-        let state = ConfiguringSession { Config = config; PlayerRequests = []; EditMode = NoEdit }
-        do! storage.SetState state
-        return Message.setModel { model with Page = ConfigurePage; State = state }
+        do! repo |> updateSession (ConfigurableSession state.Config)
+        let localState = ConfiguringSession state
+        do! storage.SetState localState
+        return Message.setModel { model with Page = ConfigurePage; State = localState }
     }
 
     return model, result |> Message.handleAsyncError |> Cmd.OfAsync.result
 }
 
-let setBettingType bettingType config =
-    configureSession { config with ConfigBettingType = bettingType }
+let setBettingType bettingType state =
+    updateSession { state with Config = { state.Config with ConfigBettingType = bettingType } }
 
-let setRaiseType raiseType config =
-    configureSession { config with ConfigRaiseType = raiseType }
+let setRaiseType raiseType state =
+    updateSession { state with Config = { state.Config with ConfigRaiseType = raiseType } }
 
 let editPlayerName playerName state model =
     let newState = { state with EditMode = ConfigSessionEditMode.Player (playerName, playerName |> PlayerName.value) }
@@ -47,7 +47,7 @@ let acceptPlayerRequest playerName state model = monad {
 
     do! Env.askMediator |>> EventMediator.post (PlayerAccepted playerName) newState.Config.ConfigId
 
-    return { model with State = ConfiguringSession newState }, Cmd.none
+    return! model |> updateSession newState
 }
 
 let rejectPlayerRequest playerName state model = monad {
@@ -82,16 +82,16 @@ let private doAcceptPlayerNameEdit playerName newName state = monad {
     let renameInfo =  { HostName = newState.Config.ConfigHost.Name; OldName = playerName; NewName = newName }
     do! Env.askMediator |>> EventMediator.post (PlayerRenamed renameInfo) newState.Config.ConfigId
 
-    return ConfiguringSession newState
+    return newState
 }
 
 let acceptPlayerNameEdit playerName editedName state model = monad {
     let! newState =
         match editedName |> PlayerName.create with
         | Ok newName -> doAcceptPlayerNameEdit playerName newName state
-        | _ -> ConfiguringSession state |> Env.none
+        | _ -> state |> Env.none
 
-    return { model with State = newState }, Cmd.none
+    return! model |> updateSession newState
 }
 
 let cancelPlayerNameEdit state model =
@@ -108,5 +108,5 @@ let removePlayer playerName state model = monad {
     
     do! Env.askMediator |>> EventMediator.post (PlayerRemoved playerName) newState.Config.ConfigId
 
-    return { model with State = ConfiguringSession newState }, Cmd.none
+    return! model |> updateSession newState
 }

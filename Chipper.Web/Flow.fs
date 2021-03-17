@@ -1,7 +1,6 @@
 module Chipper.Web.Flow
 
 open FSharpPlus
-open FSharpPlus.Data
 
 open FsToolkit.ErrorHandling
 open Elmish
