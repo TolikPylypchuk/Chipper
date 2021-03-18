@@ -72,8 +72,8 @@ let startPage isValid isReadonly sessionName playerName dispatch =
         ]
     ]
 
-let joinPage (GameSessionName sessionName) (newPlayer : Result<PlayerJoinInfo, _>) dispatch =
-    let name, isValid = match newPlayer with Ok player -> player.PlayerName |> PlayerName.value, true | _ -> "", false
+let joinPage name (GameSessionName sessionName) (newPlayer : Result<PlayerJoinInfo, _>) dispatch =
+    let isValid = match newPlayer with Ok _ -> true | _ -> false
 
     div [ attr.class' "h-100 d-flex align-items-center" ] [
         div [ attr.class' "container" ] [

@@ -136,7 +136,7 @@ let mainView js createJoinUrl model dispatch =
         empty
 
     | JoinPage _, JoiningSession player ->
-        View.joinPage player.GameSessionName (player |> Model.tryCreateJoinInfo) dispatch
+        View.joinPage player.Name player.GameSessionName (player |> Model.tryCreateJoinInfo) dispatch
 
     | JoinPage _, AwaitingJoinConfirmation player ->
         View.awaitJoinPage player.ValidGameSessionName

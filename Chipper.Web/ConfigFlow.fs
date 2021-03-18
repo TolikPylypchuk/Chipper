@@ -35,8 +35,22 @@ let editPlayerName playerName state model =
     let newState = { state with EditMode = ConfigSessionEditMode.Player (playerName, playerName |> PlayerName.value) }
     { model with State = ConfiguringSession newState }, Cmd.none
 
+let private isUnique (players : Player list) playerName =
+    players |> List.exists (fun player -> player.Name = playerName) |> not
+
+let private apendNumberIfNotUnique players playerName =
+    let isUnique = isUnique players
+    if playerName |> isUnique then
+        playerName
+    else
+        2
+        |> Seq.unfold (fun num -> Some (playerName |> PlayerName.appendNumber num, num + 1))
+        |> Seq.filter isUnique
+        |> Seq.head
+
 let acceptPlayerRequest playerName state model = monad {
-    let newPlayer = { Name = playerName; Chips = [] }
+    let actualName = playerName |> apendNumberIfNotUnique (state.Config.ConfigHost :: state.Config.ConfigPlayers)
+    let newPlayer = { Name = actualName; Chips = [] }
     let playerRequests = state.PlayerRequests |> List.filter (fun joinInfo -> joinInfo.PlayerName <> playerName)
 
     let newState =
@@ -46,6 +60,10 @@ let acceptPlayerRequest playerName state model = monad {
         }
 
     do! Env.askMediator |>> EventMediator.post (PlayerAccepted playerName) newState.Config.ConfigId
+
+    if actualName <> playerName then
+        let renameInfo = { OldName = playerName; NewName = actualName; HostName = PlayerName.theGame }
+        do! Env.askMediator |>> EventMediator.post (PlayerRenamed renameInfo) newState.Config.ConfigId
 
     return! model |> updateSession newState
 }

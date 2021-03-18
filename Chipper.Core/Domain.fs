@@ -116,12 +116,25 @@ module BetAmount =
 [<RequireQualifiedAccess>]
 module PlayerName =
 
+    let private maxLength = 50
+
     let create name =
-        if (not <| String.IsNullOrEmpty(name)) && name.Length <= 50
+        if (not <| String.IsNullOrEmpty(name)) && name.Length <= maxLength
         then PlayerName name |> Ok
         else InvalidPlayerName name |> Error
 
     let value (PlayerName name) = name
+
+    let theGame = PlayerName <| nameof Chipper
+
+    let appendNumber num (PlayerName playerName) =
+        let playerNameAndNumber = $"{playerName} {num}"
+
+        if playerNameAndNumber.Length <= maxLength then
+            playerNameAndNumber |> PlayerName
+        else
+            let lengthToCut = playerNameAndNumber.Length - maxLength
+            $"{playerName.Remove(playerName.Length - lengthToCut)} {num}" |> PlayerName
 
 [<RequireQualifiedAccess>]
 module Player =
