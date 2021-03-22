@@ -76,8 +76,8 @@ let updateGameStart message model =
     | RequestAccess joinInfo, JoiningSession player ->
         model |> GameStartFlow.requestAccess player joinInfo
 
-    | RequestAccess joinInfo, (AwaitingJoinRejected player | AwaitingGameStartRemoved player) ->
-        model |> GameStartFlow.requestAccessAgain player joinInfo
+    | RequestAccessAgain request, (AwaitingJoinRejected player | AwaitingGameStartRemoved player) ->
+        model |> GameStartFlow.requestAccessAgain player request
 
     | AcceptRename, AwaitingGameStartRenamed (player, _) ->
         model |> GameStartFlow.acceptRename player |> Env.none
@@ -92,9 +92,9 @@ let updateConfig message model =
 
     | SetRaiseType raiseType, ConfiguringSession state ->
         model |> ConfigFlow.setRaiseType raiseType state
-        
-    | EditPlayerName playerName, ConfiguringSession state ->
-        model |> ConfigFlow.editPlayerName playerName state |> Env.none
+
+    | EditPlayerName playerId, ConfiguringSession state ->
+        model |> ConfigFlow.editPlayerName playerId state |> Env.none
 
     | AcceptPlayerRequest playerName, ConfiguringSession state ->
         model |> ConfigFlow.acceptPlayerRequest playerName state
@@ -102,15 +102,15 @@ let updateConfig message model =
     | RejectPlayerRequest playerName, ConfiguringSession state ->
         model |> ConfigFlow.rejectPlayerRequest playerName state
 
-    | ConfigInputPlayerName editedName, ConfiguringSession ({ EditMode = Player (playerName, _) } as state) ->
-        model |> ConfigFlow.inputPlayerName playerName editedName state |> Env.none
+    | ConfigInputPlayerName editedName, ConfiguringSession ({ EditMode = EditPlayer (playerId, _) } as state) ->
+        model |> ConfigFlow.inputPlayerName playerId editedName state |> Env.none
 
-    | AcceptPlayerNameEdit, ConfiguringSession ({ EditMode = Player (playerName, editedName) } as state) ->
-        model |> ConfigFlow.acceptPlayerNameEdit playerName editedName state
+    | AcceptPlayerNameEdit, ConfiguringSession ({ EditMode = EditPlayer (playerId, editedName) } as state) ->
+        model |> ConfigFlow.acceptPlayerNameEdit playerId editedName state
 
     | CancelPlayerNameEdit, ConfiguringSession state ->
         model |> ConfigFlow.cancelPlayerNameEdit state |> Env.none
-        
+
     | RemovePlayer playerName, ConfiguringSession state ->
         model |> ConfigFlow.removePlayer playerName state
 
@@ -148,10 +148,10 @@ let mainView js createJoinUrl model dispatch =
         GameStartView.lobbyPage player.ValidGameSessionName (Some renameInfo) dispatch
 
     | JoinPage _, AwaitingJoinRejected player ->
-        GameStartView.rejectedJoinPage player.ValidGameSessionName (player |> Model.createJoinInfo) false dispatch
+        GameStartView.rejectedJoinPage player.ValidGameSessionName (player |> Model.createJoinRequest) false dispatch
 
     | JoinPage _, AwaitingGameStartRemoved player ->
-        GameStartView.rejectedJoinPage player.ValidGameSessionName (player |> Model.createJoinInfo) true dispatch
+        GameStartView.rejectedJoinPage player.ValidGameSessionName (player |> Model.createJoinRequest) true dispatch
 
     | JoinPage _, JoiningInvalidSession ->
         GameStartView.invalidJoinPage
@@ -163,7 +163,7 @@ let mainView js createJoinUrl model dispatch =
 
     | ConfigurePage, ConfiguringSession state ->
         let joinUrl = createJoinUrl state.Config.ConfigId
-        let isNameValid = ConfigFlow.isEditedPlayerNameValid state.Config.ConfigPlayers
+        let isNameValid = ConfigFlow.isEditedPlayerNameValid (state.Config.ConfigHost :: state.Config.ConfigPlayers)
         ConfigView.configurePage js state joinUrl isNameValid dispatch
 
     | _ ->

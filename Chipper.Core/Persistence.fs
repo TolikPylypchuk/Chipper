@@ -14,11 +14,14 @@ type UpdateSession = PersistentGameSession -> Async<Result<unit, PersistenceErro
 
 type DeleteSession = GameSessionId -> Async<Result<unit, PersistenceError>>
 
+type GeneratePlayerId = unit -> Async<PlayerId>
+
 type GameSessionRepository = {
     GetSession : GetSession
     CreateSession : CreateSession
     UpdateSession : UpdateSession
     DeleteSession : DeleteSession
+    GeneratePlayerId : GeneratePlayerId
 }
 
 [<RequireQualifiedAccess>]

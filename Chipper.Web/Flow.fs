@@ -30,7 +30,7 @@ let asMessage page =
 let private getConfigSessionState repo config = async {
     match! repo |> getSession config.ConfigId with
     | Ok (ConfigurableSession config) ->
-        let state = { Config = config; PlayerRequests = []; EditMode = NoEdit }
+        let state = { Config = config; EditMode = NoEdit }
         return ConfiguringSession state |> Some
     | _ ->
         return None

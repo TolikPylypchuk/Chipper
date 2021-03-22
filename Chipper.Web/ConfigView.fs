@@ -41,7 +41,7 @@ let private configurePagePlayer state (player : Player) name dispatch =
             button [
                 attr.type' "button"
                 attr.class' "btn btn-secondary btn-sm m-1"
-                on.click (fun _ -> dispatch <| Message.editPlayerName player.Name)
+                on.click (fun _ -> dispatch <| Message.editPlayerName player.Id)
             ] [
                 i [ attr.class' "bi bi-pencil-square" ] []
             ]
@@ -50,14 +50,14 @@ let private configurePagePlayer state (player : Player) name dispatch =
                 attr.type' "button"
                 attr.class' "btn btn-danger btn-sm m-1"
                 attr.disabled (player.Name = state.Config.ConfigHost.Name)
-                on.click (fun _ -> dispatch <| Message.removePlayer player.Name)
+                on.click (fun _ -> dispatch <| Message.removePlayer player.Id)
             ] [
                 i [ attr.class' "bi bi-x-circle" ] []
             ]
         ]
     ]
 
-let private configurePageEditedPlayer originalName editedName isPlayerNameValid dispatch =
+let private configurePageEditedPlayer playerId editedName isPlayerNameValid dispatch =
     concat [
         input [
             attr.name "player-name"
@@ -68,7 +68,7 @@ let private configurePageEditedPlayer originalName editedName isPlayerNameValid 
             button [
                 attr.type' "button"
                 attr.class' "btn btn-success btn-sm m-1"
-                attr.disabled (not <| isPlayerNameValid originalName editedName)
+                attr.disabled (not <| isPlayerNameValid playerId editedName)
                 on.click (fun _ -> dispatch Message.acceptPlayerNameEdit)
             ] [
                 i [ attr.class' "bi bi-check2-circle" ] []
@@ -96,8 +96,8 @@ let private configurePagePlayers state isPlayerNameValid dispatch =
 
                 li [ attr.class' "list-group-item d-flex flex-row align-items-center justify-content-between" ] [
                     cond state.EditMode <| function
-                        | Player (playerName', editedName) when playerName' = player.Name ->
-                            configurePageEditedPlayer playerName' editedName isPlayerNameValid dispatch
+                        | EditPlayer (playerId, editedName) when playerId = player.Id ->
+                            configurePageEditedPlayer playerId editedName isPlayerNameValid dispatch
                         | _ ->
                             configurePagePlayer state player name dispatch
                 ]
@@ -111,30 +111,31 @@ let private configurePagePlayerRequests state dispatch =
         ]
 
         ul [ attr.class' "list-group w-100" ] [
-            forEach state.PlayerRequests <| fun { PlayerName = ((PlayerName name) as playerName) } ->
-                li [ attr.class' "list-group-item d-flex flex-row align-items-center justify-content-between" ] [
-                    span [ attr.class' "me-3" ] [
-                        text name
-                    ]
-
-                    div [] [
-                        button [
-                            attr.type' "button"
-                            attr.class' "btn btn-success btn-sm m-1"
-                            on.click (fun _ -> dispatch <| Message.acceptPlayerRequest playerName)
-                        ] [
-                            i [ attr.class' "bi bi-check2-circle" ] []
+            forEach state.Config.ConfigPlayerRequests <|
+                fun { PlayerId = playerId; Info = { PlayerName = PlayerName name } } ->
+                    li [ attr.class' "list-group-item d-flex flex-row align-items-center justify-content-between" ] [
+                        span [ attr.class' "me-3" ] [
+                            text name
                         ]
 
-                        button [
-                            attr.type' "button"
-                            attr.class' "btn btn-danger btn-sm m-1"
-                            on.click (fun _ -> dispatch <| Message.rejectPlayerRequest playerName)
-                        ] [
-                            i [ attr.class' "bi bi-x-circle" ] []
+                        div [] [
+                            button [
+                                attr.type' "button"
+                                attr.class' "btn btn-success btn-sm m-1"
+                                on.click (fun _ -> dispatch <| Message.acceptPlayerRequest playerId)
+                            ] [
+                                i [ attr.class' "bi bi-check2-circle" ] []
+                            ]
+
+                            button [
+                                attr.type' "button"
+                                attr.class' "btn btn-danger btn-sm m-1"
+                                on.click (fun _ -> dispatch <| Message.rejectPlayerRequest playerId)
+                            ] [
+                                i [ attr.class' "bi bi-x-circle" ] []
+                            ]
                         ]
                     ]
-                ]
         ]
     ]
 

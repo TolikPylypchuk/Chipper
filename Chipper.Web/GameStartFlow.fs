@@ -1,6 +1,7 @@
 module Chipper.Web.GameStartFlow
 
 open FSharpPlus
+open FSharpPlus.Data
 
 open FsToolkit.ErrorHandling
 
@@ -49,7 +50,7 @@ let saveSessionNameWhenConfiguring model =
     { model with Page = ConfigurePage }, Cmd.none
 
 let onSessionSaved config model = monad {
-    let state = ConfiguringSession { Config = config; PlayerRequests = []; EditMode = NoEdit }
+    let state = ConfiguringSession { Config = config; EditMode = NoEdit }
 
     do! Flow.setStateSimple state
     let! loop = Flow.createEventLoop config.ConfigId
@@ -57,21 +58,31 @@ let onSessionSaved config model = monad {
     return { model with Page = ConfigurePage; State = state }, loop
 }
 
-let private doRequestAccess player joinInfo = monad {
-    let! mediator = Env.askMediator
-    mediator |> EventMediator.post (PlayerAccessRequested joinInfo) player.ValidGameSessionId
+let private doRequestAccess player request = monad {
+    do! Env.askMediator |>> EventMediator.post (PlayerAccessRequested request) player.ValidGameSessionId
     return AwaitingJoinConfirmation player
 }
 
 let requestAccess player joinInfo model = monad {
-    let! storage = Env.askStorage
-    let validPlayer = player |> ValidJoiningPlayer.create joinInfo
-    let! newState = doRequestAccess validPlayer joinInfo
+    let! repo = Env.askRepo
+
+    let request = async {
+        let! id = repo.GeneratePlayerId ()
+        let request = { PlayerId = id; Info = joinInfo }
+        let validPlayer = player |> ValidJoiningPlayer.create request
+        return monad {
+            let! newState = doRequestAccess validPlayer request
+            do! Flow.setStateSimple newState
+            return { model with State = newState }
+        }
+    }
+
+    let! env = Reader.ask
+    let execRequest = Cmd.OfAsync.perform (fun env -> request |>> flip Reader.run env) env Message.setModel
 
     let! loop = Flow.createEventLoop player.GameSessionId
-    Async.StartImmediate <| storage.SetState newState
 
-    return { model with State = newState }, loop
+    return model, Cmd.batch [ execRequest; loop ]
 }
 
 let requestAccessAgain player joinInfo model = monad {

@@ -15,17 +15,16 @@ type Page =
 
 type ConfigSessionEditMode =
     | NoEdit
-    | Player of PlayerName * string
+    | EditPlayer of PlayerId * string
 
 type ConfigSessionState = {
     Config : GameSessionConfig
-    PlayerRequests : PlayerJoinInfo list
     EditMode : ConfigSessionEditMode
 }
 
 type PlayerRenameInfo = {
     HostName : PlayerName
-    OldName : PlayerName
+    PlayerId : PlayerId
     NewName : PlayerName
 }
 
@@ -62,8 +61,8 @@ module Model =
         | Ok _ -> true
         | _ -> false
 
-    let createJoinInfo { ValidGameSessionId = id; ValidName = name } =
-        { GameSessionId = id; PlayerName = name; }
+    let createJoinRequest { ValidGameSessionId = sessionId; ValidId = id; ValidName = name } =
+        { PlayerId = id; Info = { GameSessionId = sessionId; PlayerName = name } }
 
     let tryCreateJoinInfo { GameSessionId = id; Name = name } =
         name |> playerName |> Result.map (fun playerName -> { GameSessionId = id; PlayerName = playerName })

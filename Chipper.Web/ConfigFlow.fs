@@ -31,9 +31,19 @@ let setBettingType bettingType state =
 let setRaiseType raiseType state =
     updateSession { state with Config = { state.Config with ConfigRaiseType = raiseType } }
 
-let editPlayerName playerName state model =
-    let newState = { state with EditMode = ConfigSessionEditMode.Player (playerName, playerName |> PlayerName.value) }
-    { model with State = ConfiguringSession newState }, Cmd.none
+let editPlayerName playerId state model =
+    let name =
+        state.Config.ConfigPlayers
+        |> List.filter (fun player -> player.Id = playerId)
+        |> List.map (fun player -> player.Name)
+        |> List.tryHead
+
+    match name with
+    | Some name -> 
+        let newState = { state with EditMode = EditPlayer (playerId, name |> PlayerName.value) }
+        { model with State = ConfiguringSession newState }, Cmd.none
+    | None ->
+        model, Cmd.none
 
 let private isUnique (players : Player list) playerName =
     players |> List.exists (fun player -> player.Name = playerName) |> not
@@ -48,45 +58,61 @@ let private apendNumberIfNotUnique players playerName =
         |> Seq.filter isUnique
         |> Seq.head
 
-let acceptPlayerRequest playerName state model = monad {
-    let actualName = playerName |> apendNumberIfNotUnique (state.Config.ConfigHost :: state.Config.ConfigPlayers)
-    let newPlayer = { Name = actualName; Chips = [] }
-    let playerRequests = state.PlayerRequests |> List.filter (fun joinInfo -> joinInfo.PlayerName <> playerName)
+let acceptPlayerRequest playerId state model = monad {
+    let name =
+        state.Config.ConfigPlayerRequests
+        |> List.filter (fun request -> request.PlayerId = playerId)
+        |> List.map (fun request -> request.Info.PlayerName)
+        |> List.tryHead
 
-    let newState =
-        { state with
-            Config = { state.Config with ConfigPlayers = state.Config.ConfigPlayers @ [ newPlayer ] }
-            PlayerRequests = playerRequests
-        }
+    match name with
+    | Some name ->
+        let actualName = name |> apendNumberIfNotUnique (state.Config.ConfigHost :: state.Config.ConfigPlayers)
+        let newPlayer = { Id = playerId; Name = actualName; Chips = [] }
+        let playerRequests =
+            state.Config.ConfigPlayerRequests
+            |> List.filter (fun request -> request.PlayerId <> playerId)
 
-    do! Env.askMediator |>> EventMediator.post (PlayerAccepted playerName) newState.Config.ConfigId
+        let newState =
+            {
+                state with
+                    Config = {
+                        state.Config with
+                            ConfigPlayers = state.Config.ConfigPlayers @ [ newPlayer ]
+                            ConfigPlayerRequests = playerRequests
+                    }
+            }
 
-    if actualName <> playerName then
-        let renameInfo = { OldName = playerName; NewName = actualName; HostName = PlayerName.theGame }
-        do! Env.askMediator |>> EventMediator.post (PlayerRenamed renameInfo) newState.Config.ConfigId
+        do! Env.askMediator |>> EventMediator.post (PlayerAccepted playerId) newState.Config.ConfigId
 
-    return! model |> updateSession newState
+        if actualName <> name then
+            let renameInfo = { PlayerId = playerId; NewName = actualName; HostName = PlayerName.theGame }
+            do! Env.askMediator |>> EventMediator.post (PlayerRenamed renameInfo) newState.Config.ConfigId
+
+        return! model |> updateSession newState
+    | None ->
+        return model, Cmd.none
 }
 
-let rejectPlayerRequest playerName state model = monad {
-    let playerRequests = state.PlayerRequests |> List.filter (fun joinInfo -> joinInfo.PlayerName <> playerName)
-    let newState = { state with PlayerRequests = playerRequests }
+let rejectPlayerRequest playerId state model = monad {
+    let playerRequests = state.Config.ConfigPlayerRequests |> List.filter (fun request -> request.PlayerId <> playerId)
+    let newState = { state with Config = { state.Config with ConfigPlayerRequests = playerRequests } }
     
-    do! Env.askMediator |>> EventMediator.post (PlayerRejected playerName) newState.Config.ConfigId
+    do! Env.askMediator |>> EventMediator.post (PlayerRejected playerId) newState.Config.ConfigId
 
     return { model with State = ConfiguringSession newState }, Cmd.none
 }
 
 let inputPlayerName playerName editedName state model =
-    { model with State = ConfiguringSession { state with EditMode = Player (playerName, editedName) } }, Cmd.none
+    { model with State = ConfiguringSession { state with EditMode = EditPlayer (playerName, editedName) } }, Cmd.none
 
-let private doAcceptPlayerNameEdit playerName newName state = monad {
+let private doAcceptPlayerNameEdit playerId newName state = monad {
     let newPlayers =
         state.Config.ConfigPlayers
-        |> List.map (fun player -> if player.Name = playerName then { player with Name = newName } else player)
+        |> List.map (fun player -> if player.Id = playerId then { player with Name = newName } else player)
 
     let host =
-        if state.Config.ConfigHost.Name = playerName
+        if state.Config.ConfigHost.Id = playerId
         then { state.Config.ConfigHost with Name = newName }
         else state.Config.ConfigHost
 
@@ -97,7 +123,7 @@ let private doAcceptPlayerNameEdit playerName newName state = monad {
                 EditMode = NoEdit
         }
 
-    let renameInfo =  { HostName = newState.Config.ConfigHost.Name; OldName = playerName; NewName = newName }
+    let renameInfo =  { HostName = newState.Config.ConfigHost.Name; PlayerId = playerId; NewName = newName }
     do! Env.askMediator |>> EventMediator.post (PlayerRenamed renameInfo) newState.Config.ConfigId
 
     return newState
@@ -115,16 +141,16 @@ let acceptPlayerNameEdit playerName editedName state model = monad {
 let cancelPlayerNameEdit state model =
     { model with State = ConfiguringSession { state with EditMode = NoEdit } }, Cmd.none
 
-let isEditedPlayerNameValid players originalName editedName =
+let isEditedPlayerNameValid players playerId editedName =
     match editedName |> PlayerName.create with
-    | Ok name -> players |> List.forall (fun (player : Player) -> player.Name = originalName || player.Name <> name)
+    | Ok name -> players |> List.forall (fun (player : Player) -> player.Id = playerId || player.Name <> name)
     | _ -> false
 
-let removePlayer playerName state model = monad {
-    let players = state.Config.ConfigPlayers |> List.filter (fun player -> player.Name <> playerName)
+let removePlayer playerId state model = monad {
+    let players = state.Config.ConfigPlayers |> List.filter (fun player -> player.Id <> playerId)
     let newState = { state with Config = { state.Config with ConfigPlayers = players } }
     
-    do! Env.askMediator |>> EventMediator.post (PlayerRemoved playerName) newState.Config.ConfigId
+    do! Env.askMediator |>> EventMediator.post (PlayerRemoved playerId) newState.Config.ConfigId
 
     return! model |> updateSession newState
 }

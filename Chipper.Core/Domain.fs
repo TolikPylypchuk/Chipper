@@ -17,9 +17,12 @@ type Move =
     | Raise of Bet
     | Fold
 
+type PlayerId = PlayerId of Guid
+
 type PlayerName = private PlayerName of string
 
 type Player = {
+    Id : PlayerId
     Name : PlayerName
     Chips : Chip list
 }
@@ -56,9 +59,33 @@ type GameSessionId = GameSessionId of Guid
 
 type GameSessionName = private GameSessionName of string
 
+type JoiningPlayer = {
+    GameSessionId : GameSessionId
+    GameSessionName : GameSessionName
+    Name : string
+}
+
+type ValidJoiningPlayer = {
+    ValidGameSessionId : GameSessionId
+    ValidGameSessionName : GameSessionName
+    ValidId : PlayerId
+    ValidName : PlayerName
+}
+
+type PlayerJoinInfo = {
+    GameSessionId : GameSessionId
+    PlayerName : PlayerName
+}
+
+type PlayerJoinRequest = {
+    PlayerId : PlayerId
+    Info : PlayerJoinInfo
+}
+
 type GameSessionConfig = {
     ConfigId : GameSessionId
     ConfigName : GameSessionName
+    ConfigPlayerRequests : PlayerJoinRequest list
     ConfigDate : DateTime
     ConfigHost : Player
     ConfigPlayers : Player list
@@ -74,23 +101,6 @@ type GameSession = private {
     RaiseType : RaiseType
     BettingType : BettingType
     Games : Game list
-}
-
-type JoiningPlayer = {
-    GameSessionId : GameSessionId
-    GameSessionName : GameSessionName
-    Name : string
-}
-
-type ValidJoiningPlayer = {
-    ValidGameSessionId : GameSessionId
-    ValidGameSessionName : GameSessionName
-    ValidName : PlayerName
-}
-
-type PlayerJoinInfo = {
-    GameSessionId : GameSessionId
-    PlayerName : PlayerName
 }
 
 [<RequireQualifiedAccess>]
@@ -148,11 +158,12 @@ module Player =
 [<RequireQualifiedAccess>]
 module ValidJoiningPlayer =
 
-    let create joinInfo (player : JoiningPlayer) =
+    let create joinRequest (player : JoiningPlayer) =
         {
             ValidGameSessionId = player.GameSessionId
             ValidGameSessionName = player.GameSessionName
-            ValidName = joinInfo.PlayerName
+            ValidId = joinRequest.PlayerId
+            ValidName = joinRequest.Info.PlayerName
         }
 
 [<RequireQualifiedAccess>]
@@ -173,14 +184,14 @@ module GameSessionName =
 [<RequireQualifiedAccess>]
 module GameSession =
 
-    let defaultConfig id name date hostName =
-        let host = { Name = hostName; Chips = [] }
+    let defaultConfig id name date hostId hostName =
         {
             ConfigId = id
             ConfigName = name
             ConfigDate = date
-            ConfigHost = host
+            ConfigHost = { Id = hostId; Name = hostName; Chips = [] }
             ConfigPlayers = []
+            ConfigPlayerRequests = []
             ConfigRaiseType = NoLimit
             ConfigBettingType = Blinds
         }

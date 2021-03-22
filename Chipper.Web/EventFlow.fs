@@ -7,7 +7,8 @@ open Elmish
 open Chipper.Core.Domain
 
 let onPlayerAccessRequested state joinInfo model = monad {
-    let newState = ConfiguringSession { state with PlayerRequests = state.PlayerRequests @ [ joinInfo ] }
+    let config = { state.Config with ConfigPlayerRequests = state.Config.ConfigPlayerRequests @ [ joinInfo ] }
+    let newState = ConfiguringSession { state with Config = config }
     do! Flow.setStateSimple newState
     return { model with State = newState }, Cmd.none
 }
@@ -39,17 +40,19 @@ let receiveEvent event model =
     | PlayerAccessRequested joinInfo, ConfiguringSession state ->
         model |> onPlayerAccessRequested state joinInfo
 
-    | PlayerAccepted playerName, AwaitingJoinConfirmation player when player.ValidName = playerName ->
+    | PlayerAccepted playerId, AwaitingJoinConfirmation player when player.ValidId = playerId ->
         model |> onPlayerAccepted player
 
-    | PlayerRejected playerName, AwaitingJoinConfirmation player when player.ValidName = playerName ->
+    | PlayerRejected playerId, AwaitingJoinConfirmation player when player.ValidId = playerId ->
         model |> onPlayerRejected player
 
-    | PlayerRenamed renameInfo, AwaitingGameStart player when player.ValidName = renameInfo.OldName ->
+    | PlayerRenamed renameInfo, (AwaitingGameStart player | AwaitingGameStartRenamed (player, _))
+        when player.ValidId = renameInfo.PlayerId ->
         model |> onPlayerRenamed player renameInfo
-
-    | PlayerRemoved playerName, AwaitingGameStart player when player.ValidName = playerName ->
+        
+    | PlayerRemoved playerId, (AwaitingGameStart player | AwaitingGameStartRenamed (player, _))
+        when player.ValidId = playerId ->
         model |> onPlayerRemoved player
-
+        
     | _ ->
         model |> Flow.doNothing |> Env.none

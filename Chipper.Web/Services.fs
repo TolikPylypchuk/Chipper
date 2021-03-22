@@ -71,7 +71,8 @@ let inMemoryRepository () =
 
         CreateSession = fun name hostName -> async {
             let id = Guid.NewGuid() |> GameSessionId
-            let config = GameSession.defaultConfig id name DateTime.Now hostName
+            let hostId = Guid.NewGuid() |> PlayerId
+            let config = GameSession.defaultConfig id name DateTime.Now hostId hostName
             storage.Add(id, ConfigurableSession config)
             return Ok config
         }
@@ -79,4 +80,6 @@ let inMemoryRepository () =
         UpdateSession = fun session -> async { return (storage.[session |> PersistentGameSession.id] <- session) |> Ok }
 
         DeleteSession = fun id -> async { return storage.Remove(id) |> ignore |> Ok }
+
+        GeneratePlayerId = fun () -> Guid.NewGuid() |> PlayerId |> async.Return
     }

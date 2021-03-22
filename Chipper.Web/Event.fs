@@ -3,11 +3,11 @@ namespace Chipper.Web
 open Chipper.Core.Domain
 
 type Event =
-    | PlayerAccessRequested of PlayerJoinInfo
-    | PlayerAccepted of PlayerName
-    | PlayerRejected of PlayerName
+    | PlayerAccessRequested of PlayerJoinRequest
+    | PlayerAccepted of PlayerId
+    | PlayerRejected of PlayerId
     | PlayerRenamed of PlayerRenameInfo
-    | PlayerRemoved of PlayerName
+    | PlayerRemoved of PlayerId
 
 type GameSessionEvent = {
     GameSessionId : GameSessionId

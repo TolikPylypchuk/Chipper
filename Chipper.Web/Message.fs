@@ -20,18 +20,19 @@ type GameStartMessage =
     | SaveSessionName
     | SessionSaved of GameSessionConfig
     | RequestAccess of PlayerJoinInfo
+    | RequestAccessAgain of PlayerJoinRequest
     | AcceptRename
 
 type ConfigMessage =
     | SetBettingType of BettingType
     | SetRaiseType of RaiseType
-    | EditPlayerName of PlayerName
+    | EditPlayerName of PlayerId
     | ConfigInputPlayerName of string
     | AcceptPlayerNameEdit
     | CancelPlayerNameEdit
-    | AcceptPlayerRequest of PlayerName
-    | RejectPlayerRequest of PlayerName
-    | RemovePlayer of PlayerName
+    | AcceptPlayerRequest of PlayerId
+    | RejectPlayerRequest of PlayerId
+    | RemovePlayer of PlayerId
 
 type Message =
     | GenericMessage of GenericMessage
@@ -56,6 +57,7 @@ module Message =
     let saveSessionName = SaveSessionName |> GameStartMessage
     let sessionSaved = SessionSaved >> GameStartMessage
     let requestAccess = RequestAccess >> GameStartMessage
+    let requestAccessAgain = RequestAccessAgain >> GameStartMessage
     let acceptRename = AcceptRename |> GameStartMessage
 
     let setBettingType = SetBettingType >> ConfigMessage

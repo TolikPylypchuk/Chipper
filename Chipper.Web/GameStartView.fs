@@ -72,7 +72,7 @@ let startPage isValid isReadonly sessionName playerName dispatch =
         ]
     ]
 
-let joinPage name (GameSessionName sessionName) (newPlayer : Result<PlayerJoinInfo, _>) dispatch =
+let joinPage name (GameSessionName sessionName) newPlayer dispatch =
     let isValid = match newPlayer with Ok _ -> true | _ -> false
 
     div [ attr.class' "h-100 d-flex align-items-center" ] [
@@ -192,7 +192,7 @@ let rejectedJoinPage (GameSessionName sessionName) newPlayer wasAlreadyAdded dis
                 button [
                     attr.type' "button"
                     attr.class' "btn btn-primary btn-lg"
-                    on.click (fun _ -> dispatch <| Message.requestAccess newPlayer)
+                    on.click (fun _ -> dispatch <| Message.requestAccessAgain newPlayer)
                 ] [
                     text "Request access again"
                 ]
