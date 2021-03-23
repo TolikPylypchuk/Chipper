@@ -6,7 +6,7 @@ open Elmish
 
 open Chipper.Core.Domain
 
-let onPlayerAccessRequested state request model = monad {
+let private onPlayerAccessRequested state request model = monad {
     let config = { state.Config with ConfigPlayerRequests = state.Config.ConfigPlayerRequests @ [ request ] }
     let newState = { state with Config = config }
     let localState = ConfiguringSession newState
@@ -15,26 +15,43 @@ let onPlayerAccessRequested state request model = monad {
     return! { model with State = localState } |> Flow.updateSession newState
 }
 
-let onPlayerAccepted player model = monad {
+let private onPlayerAccepted player model = monad {
     let newState = AwaitingGameStart player
     do! Flow.setStateSimple newState
     return { model with State = newState }, Cmd.none
 }
 
-let onPlayerRejected player model = monad {
+let private onPlayerRejected player model = monad {
     do! Flow.clearStateSimple
     return { model with State = AwaitingJoinRejected player }, Cmd.none
 }
 
-let onPlayerRemoved player model = monad {
+let private onPlayerRemoved player model = monad {
     do! Flow.clearStateSimple
     return { model with State = AwaitingGameStartRemoved player }, Cmd.none
 }
 
-let onPlayerRenamed player renameInfo model = monad {
+let private onPlayerRenamed player renameInfo model = monad {
     let renamedPlayer = { player with ValidName = renameInfo.NewName }
     do! Flow.setStateSimple <| AwaitingGameStart renamedPlayer
     return { model with State = AwaitingGameStartRenamed (renamedPlayer, renameInfo) }, Cmd.none
+}
+
+let private onPlayerRequestCanceled state playerId model = monad {
+    let newPlayers =
+        state.Config.ConfigPlayers
+        |> List.filter (fun player -> player.Id <> playerId)
+
+    let newPlayerRequests =
+        state.Config.ConfigPlayerRequests
+        |> List.filter (fun request -> request.PlayerId <> playerId)
+
+    let config = { state.Config with ConfigPlayers = newPlayers; ConfigPlayerRequests = newPlayerRequests }
+    let newState = { state with Config = config }
+    let localState = ConfiguringSession newState
+
+    do! Flow.setStateSimple localState
+    return! { model with State = localState } |> Flow.updateSession newState
 }
 
 let receiveEvent event model =
@@ -56,5 +73,8 @@ let receiveEvent event model =
         when player.ValidId = playerId ->
         model |> onPlayerRemoved player
         
+    | PlayerRequestCanceled id, ConfiguringSession state ->
+        model |> onPlayerRequestCanceled state id
+
     | _ ->
         model |> Flow.doNothing |> Env.none

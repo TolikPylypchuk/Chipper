@@ -81,6 +81,10 @@ let updateGameStart message model =
 
     | AcceptRename, AwaitingGameStartRenamed (player, _) ->
         model |> GameStartFlow.acceptRename player |> Env.none
+        
+    | CancelRequest,
+      (AwaitingGameStart player | AwaitingJoinConfirmation player | AwaitingGameStartRenamed (player, _)) ->
+        model |> GameStartFlow.cancelRequest player
 
     | _ ->
         model |> Flow.doNothing |> Env.none
@@ -139,7 +143,7 @@ let mainView js createJoinUrl model dispatch =
         GameStartView.joinPage player.Name player.GameSessionName (player |> Model.tryCreateJoinInfo) dispatch
 
     | JoinPage _, AwaitingJoinConfirmation player ->
-        GameStartView.awaitJoinPage player.ValidGameSessionName
+        GameStartView.awaitJoinPage player.ValidGameSessionName dispatch
 
     | JoinPage _, AwaitingGameStart player ->
         GameStartView.lobbyPage player.ValidGameSessionName None dispatch
@@ -152,6 +156,9 @@ let mainView js createJoinUrl model dispatch =
 
     | JoinPage _, AwaitingGameStartRemoved player ->
         GameStartView.rejectedJoinPage player.ValidGameSessionName (player |> Model.createJoinRequest) true dispatch
+        
+    | JoinPage _, JoinRequestCanceled sessionName ->
+        GameStartView.joinRequestCanceledPage sessionName
 
     | JoinPage _, JoiningInvalidSession ->
         GameStartView.invalidJoinPage

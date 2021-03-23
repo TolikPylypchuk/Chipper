@@ -8,6 +8,7 @@ type Event =
     | PlayerRejected of PlayerId
     | PlayerRenamed of PlayerRenameInfo
     | PlayerRemoved of PlayerId
+    | PlayerRequestCanceled of PlayerId
 
 type GameSessionEvent = {
     GameSessionId : GameSessionId

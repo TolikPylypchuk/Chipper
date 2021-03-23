@@ -106,7 +106,7 @@ let joinPage name (GameSessionName sessionName) newPlayer dispatch =
         ]
     ]
 
-let awaitJoinPage (GameSessionName sessionName) =
+let awaitJoinPage (GameSessionName sessionName) dispatch =
     div [ attr.class' "h-100 d-flex align-items-center" ] [
         div [ attr.class' "container" ] [
             h2 [ attr.class' "display-4 m-lg-4 m-md-3 m-2 text-center" ] [
@@ -123,9 +123,19 @@ let awaitJoinPage (GameSessionName sessionName) =
                         attr.aria "valuemax" 100
                     ] []
                 ]
-                            
+
                 p [] [
                     text "Awaiting confirmation . . ."
+                ]
+
+                div [ attr.class' "text-center m-4" ] [
+                    button [
+                        attr.type' "button"
+                        attr.class' "btn btn-primary btn-lg"
+                        on.click (fun _ -> dispatch Message.cancelRequest)
+                    ] [
+                        text "Cancel request"
+                    ]
                 ]
             ]
         ]
@@ -164,6 +174,16 @@ let lobbyPage (GameSessionName sessionName) renameInfo dispatch =
                     p [] [
                         text "Now waiting for the game to start . . ."
                     ]
+                    
+                    div [ attr.class' "text-center m-4" ] [
+                        button [
+                            attr.type' "button"
+                            attr.class' "btn btn-primary btn-lg"
+                            on.click (fun _ -> dispatch Message.cancelRequest)
+                        ] [
+                            text "Cancel request"
+                        ]
+                    ]
                 ]
             ]
         ]
@@ -196,6 +216,23 @@ let rejectedJoinPage (GameSessionName sessionName) newPlayer wasAlreadyAdded dis
                 ] [
                     text "Request access again"
                 ]
+            ]
+        ]
+    ]
+
+let joinRequestCanceledPage (GameSessionName sessionName) =
+    div [ attr.class' "h-100 d-flex align-items-center" ] [
+        div [ attr.class' "container" ] [
+            h2 [ attr.class' "display-4 m-lg-4 m-md-3 m-2 text-center" ] [
+                text <| "Join " + sessionName
+            ]
+
+            h3 [ attr.class' "display-5 m-2 text-center" ] [
+                text "Request canceled"
+            ]
+
+            p [ attr.class' "lead m-2 text-center" ] [
+                text "Reload the page to request again"
             ]
         ]
     ]

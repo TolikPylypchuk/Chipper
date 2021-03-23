@@ -92,3 +92,9 @@ let requestAccessAgain player joinInfo model = monad {
 
 let acceptRename player model =
     { model with State = AwaitingGameStart player }, Cmd.none
+
+let cancelRequest player model = monad {
+    do! Flow.clearStateSimple
+    do! Env.askMediator |>> EventMediator.post (PlayerRequestCanceled player.ValidId) player.ValidGameSessionId
+    return { model with State = JoinRequestCanceled player.ValidGameSessionName }, Cmd.none
+}

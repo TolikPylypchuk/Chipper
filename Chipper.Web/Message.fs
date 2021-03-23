@@ -22,6 +22,7 @@ type GameStartMessage =
     | RequestAccess of PlayerJoinInfo
     | RequestAccessAgain of PlayerJoinRequest
     | AcceptRename
+    | CancelRequest
 
 type ConfigMessage =
     | SetBettingType of BettingType
@@ -59,6 +60,7 @@ module Message =
     let requestAccess = RequestAccess >> GameStartMessage
     let requestAccessAgain = RequestAccessAgain >> GameStartMessage
     let acceptRename = AcceptRename |> GameStartMessage
+    let cancelRequest = CancelRequest |> GameStartMessage
 
     let setBettingType = SetBettingType >> ConfigMessage
     let setRaiseType = SetRaiseType >> ConfigMessage

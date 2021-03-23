@@ -13,8 +13,8 @@
     <Compile Include="AppRouter.fs" />
     <Compile Include="ToastComponent.fs" />
     <Compile Include="View.fs" />
-    <Compile Include="ConfigView.fs" />
     <Compile Include="GameStartView.fs" />
+    <Compile Include="ConfigView.fs" />
     <Compile Include="LocalStorage.fs" />
     <Compile Include="Env.fs" />
     <Compile Include="Flow.fs" />
