@@ -8,28 +8,13 @@ open Elmish
 
 open Chipper.Core
 open Chipper.Core.Domain
-open Chipper.Core.Persistence
 open Chipper.Web
 
-let private updateSession state model = monad {
-    let! storage = Env.askStorage
-    let! repo = Env.askRepo
-
-    let result = asyncResult {
-        do! repo |> updateSession (ConfigurableSession state.Config)
-        let localState = ConfiguringSession state
-        do! storage.SetState localState
-        return Message.setModel { model with Page = ConfigurePage; State = localState }
-    }
-
-    return model, result |> Message.handleAsyncError |> Cmd.OfAsync.result
-}
-
 let setBettingType bettingType state =
-    updateSession { state with Config = { state.Config with ConfigBettingType = bettingType } }
+    Flow.updateSession { state with Config = { state.Config with ConfigBettingType = bettingType } }
 
 let setRaiseType raiseType state =
-    updateSession { state with Config = { state.Config with ConfigRaiseType = raiseType } }
+    Flow.updateSession { state with Config = { state.Config with ConfigRaiseType = raiseType } }
 
 let editPlayerName playerId state model =
     let name =
@@ -89,7 +74,7 @@ let acceptPlayerRequest playerId state model = monad {
             let renameInfo = { PlayerId = playerId; NewName = actualName; HostName = PlayerName.theGame }
             do! Env.askMediator |>> EventMediator.post (PlayerRenamed renameInfo) newState.Config.ConfigId
 
-        return! model |> updateSession newState
+        return! model |> Flow.updateSession newState
     | None ->
         return model, Cmd.none
 }
@@ -135,7 +120,7 @@ let acceptPlayerNameEdit playerName editedName state model = monad {
         | Ok newName -> doAcceptPlayerNameEdit playerName newName state
         | _ -> state |> Env.none
 
-    return! model |> updateSession newState
+    return! model |> Flow.updateSession newState
 }
 
 let cancelPlayerNameEdit state model =
@@ -152,5 +137,5 @@ let removePlayer playerId state model = monad {
     
     do! Env.askMediator |>> EventMediator.post (PlayerRemoved playerId) newState.Config.ConfigId
 
-    return! model |> updateSession newState
+    return! model |> Flow.updateSession newState
 }

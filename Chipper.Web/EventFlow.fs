@@ -6,11 +6,13 @@ open Elmish
 
 open Chipper.Core.Domain
 
-let onPlayerAccessRequested state joinInfo model = monad {
-    let config = { state.Config with ConfigPlayerRequests = state.Config.ConfigPlayerRequests @ [ joinInfo ] }
-    let newState = ConfiguringSession { state with Config = config }
-    do! Flow.setStateSimple newState
-    return { model with State = newState }, Cmd.none
+let onPlayerAccessRequested state request model = monad {
+    let config = { state.Config with ConfigPlayerRequests = state.Config.ConfigPlayerRequests @ [ request ] }
+    let newState = { state with Config = config }
+    let localState = ConfiguringSession newState
+
+    do! Flow.setStateSimple localState
+    return! { model with State = localState } |> Flow.updateSession newState
 }
 
 let onPlayerAccepted player model = monad {
@@ -37,8 +39,8 @@ let onPlayerRenamed player renameInfo model = monad {
 
 let receiveEvent event model =
     match event, model.State with
-    | PlayerAccessRequested joinInfo, ConfiguringSession state ->
-        model |> onPlayerAccessRequested state joinInfo
+    | PlayerAccessRequested request, ConfiguringSession state ->
+        model |> onPlayerAccessRequested state request
 
     | PlayerAccepted playerId, AwaitingJoinConfirmation player when player.ValidId = playerId ->
         model |> onPlayerAccepted player

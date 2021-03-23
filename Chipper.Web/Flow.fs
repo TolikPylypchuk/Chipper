@@ -166,3 +166,17 @@ let clearLocalState model = monad {
     Async.StartImmediate <| storage.ClearState ()
     return model |> ignoreLocalState
 }
+
+let updateSession state model = monad {
+    let! storage = Env.askStorage
+    let! repo = Env.askRepo
+
+    let result = asyncResult {
+        do! repo |> updateSession (ConfigurableSession state.Config)
+        let localState = ConfiguringSession state
+        do! storage.SetState localState
+        return Message.setModel { model with Page = ConfigurePage; State = localState }
+    }
+
+    return model, result |> Message.handleAsyncError |> Cmd.OfAsync.result
+}
