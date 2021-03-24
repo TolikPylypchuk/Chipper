@@ -97,23 +97,32 @@ let updateConfig message model =
     | SetRaiseType raiseType, ConfiguringSession state ->
         model |> ConfigFlow.setRaiseType raiseType state
 
-    | EditPlayerName playerId, ConfiguringSession state ->
-        model |> ConfigFlow.editPlayerName playerId state |> Env.none
-
     | AcceptPlayerRequest playerName, ConfiguringSession state ->
         model |> ConfigFlow.acceptPlayerRequest playerName state
 
     | RejectPlayerRequest playerName, ConfiguringSession state ->
         model |> ConfigFlow.rejectPlayerRequest playerName state
 
+    | EditSessionName, ConfiguringSession state ->
+        model |> ConfigFlow.editSessionName state |> Env.none
+
+    | ConfigInputSessionName editedName, ConfiguringSession ({ EditMode = EditSession _ } as state) ->
+        model |> ConfigFlow.inputSessionName editedName state |> Env.none
+
+    | EditPlayerName playerId, ConfiguringSession state ->
+        model |> ConfigFlow.editPlayerName playerId state |> Env.none
+
     | ConfigInputPlayerName editedName, ConfiguringSession ({ EditMode = EditPlayer (playerId, _) } as state) ->
         model |> ConfigFlow.inputPlayerName playerId editedName state |> Env.none
+        
+    | AcceptEdit, ConfiguringSession ({ EditMode = EditSession sessionName } as state) ->
+        model |> ConfigFlow.acceptSessionNameEdit sessionName state
 
-    | AcceptPlayerNameEdit, ConfiguringSession ({ EditMode = EditPlayer (playerId, editedName) } as state) ->
+    | AcceptEdit, ConfiguringSession ({ EditMode = EditPlayer (playerId, editedName) } as state) ->
         model |> ConfigFlow.acceptPlayerNameEdit playerId editedName state
 
-    | CancelPlayerNameEdit, ConfiguringSession state ->
-        model |> ConfigFlow.cancelPlayerNameEdit state |> Env.none
+    | CancelEdit, ConfiguringSession state ->
+        model |> ConfigFlow.cancelEdit state |> Env.none
 
     | RemovePlayer playerName, ConfiguringSession state ->
         model |> ConfigFlow.removePlayer playerName state
@@ -171,7 +180,7 @@ let mainView js createJoinUrl model dispatch =
     | ConfigurePage, ConfiguringSession state ->
         let joinUrl = createJoinUrl state.Config.ConfigId
         let isNameValid = ConfigFlow.isEditedPlayerNameValid (state.Config.ConfigHost :: state.Config.ConfigPlayers)
-        ConfigView.configurePage js state joinUrl isNameValid dispatch
+        ConfigView.configurePage js state joinUrl ConfigFlow.isEditedSessionNameValid isNameValid dispatch
 
     | _ ->
         View.notImplementedPage

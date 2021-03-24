@@ -4,11 +4,41 @@ open Bolero.Html
 
 open Chipper.Core.Domain
 
-let private configurePageHeader js state joinUrl =
+let private configurePageHeader js state joinUrl isSessionNameValid dispatch =
     concat [
         h1 [ attr.class' "display-1 p-lg-4 p-md-3 p-2 text-center" ] [
             text $"Configure {state.Config.ConfigName |> GameSession.name}"
         ]
+
+        cond state.EditMode <| function
+            | EditSession name ->
+                div [ attr.class' "d-flex flex-row align-items-center justify-content-center" ] [
+                    input [
+                        attr.name "session-name"
+                        bind.input.string name (dispatch << Message.configInputSessionName)
+                    ]
+
+                    div [] [
+                        button [
+                            attr.type' "button"
+                            attr.class' "btn btn-success btn-sm m-1"
+                            attr.disabled (not <| isSessionNameValid name)
+                            on.click (fun _ -> dispatch Message.acceptEdit)
+                        ] [
+                            i [ attr.class' "bi bi-check2-circle" ] []
+                        ]
+
+                        button [
+                            attr.type' "button"
+                            attr.class' "btn btn-danger btn-sm m-1"
+                            on.click (fun _ -> dispatch Message.cancelEdit)
+                        ] [
+                            i [ attr.class' "bi bi-x-circle" ] []
+                        ]
+                    ]
+                ]
+            | _ ->
+                empty
 
         p [ attr.class' "lead m-2 text-center" ] [
             text "And share the link for others to join"
@@ -28,6 +58,15 @@ let private configurePageHeader js state joinUrl =
             ] [
                 text "Copy the link"
             ]
+
+            button [
+                attr.type' "button"
+                attr.class' "btn btn-light btn-lg m-2"
+                attr.disabled (state.EditMode <> NoEdit)
+                on.click (fun _ -> dispatch Message.editSessionName)
+            ] [
+                text "Edit game name"
+            ]
         ]
     ]
 
@@ -41,6 +80,7 @@ let private configurePagePlayer state (player : Player) name dispatch =
             button [
                 attr.type' "button"
                 attr.class' "btn btn-secondary btn-sm m-1"
+                attr.disabled (state.EditMode <> NoEdit)
                 on.click (fun _ -> dispatch <| Message.editPlayerName player.Id)
             ] [
                 i [ attr.class' "bi bi-pencil-square" ] []
@@ -69,7 +109,7 @@ let private configurePageEditedPlayer playerId editedName isPlayerNameValid disp
                 attr.type' "button"
                 attr.class' "btn btn-success btn-sm m-1"
                 attr.disabled (not <| isPlayerNameValid playerId editedName)
-                on.click (fun _ -> dispatch Message.acceptPlayerNameEdit)
+                on.click (fun _ -> dispatch Message.acceptEdit)
             ] [
                 i [ attr.class' "bi bi-check2-circle" ] []
             ]
@@ -77,7 +117,7 @@ let private configurePageEditedPlayer playerId editedName isPlayerNameValid disp
             button [
                 attr.type' "button"
                 attr.class' "btn btn-danger btn-sm m-1"
-                on.click (fun _ -> dispatch Message.cancelPlayerNameEdit)
+                on.click (fun _ -> dispatch Message.cancelEdit)
             ] [
                 i [ attr.class' "bi bi-x-circle" ] []
             ]
@@ -192,9 +232,9 @@ let private configurePageRaiseType state dispatch =
             ]
     ]
     
-let configurePage js state joinUrl isPlayerNameValid dispatch =
+let configurePage js state joinUrl isSessionNameValid isPlayerNameValid dispatch =
     div [ attr.class' "container" ] [
-        configurePageHeader js state joinUrl
+        configurePageHeader js state joinUrl isSessionNameValid dispatch
         
         div [ attr.class' "row justify-content-md-center" ] [
             configurePagePlayers state isPlayerNameValid dispatch

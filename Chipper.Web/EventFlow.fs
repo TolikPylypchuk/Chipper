@@ -54,6 +54,28 @@ let private onPlayerRequestCanceled state playerId model = monad {
     return! { model with State = localState } |> Flow.updateSession newState
 }
 
+let private onGameSessionNameChangedWhenJoiningSession player newName model =
+    { model with State = JoiningSession { player with GameSessionName = newName } }, Cmd.none
+
+let private onGameSessionNameChangedWhenAwaitingJoinConfirmation player newName model =
+    { model with State = AwaitingJoinConfirmation { player with ValidGameSessionName = newName } }, Cmd.none
+
+let private onGameSessionNameChangedWhenAwaitingJoinRejected player newName model =
+    { model with State = AwaitingJoinRejected { player with ValidGameSessionName = newName } }, Cmd.none
+
+let private onGameSessionNameChangedWhenAwaitingGameStart player newName model =
+    { model with State = AwaitingGameStart { player with ValidGameSessionName = newName } }, Cmd.none
+
+let private onGameSessionNameChangedWhenAwaitingGameStartRenamed player renameInfo newName model =
+    let player = { player with ValidGameSessionName = newName }
+    { model with State = AwaitingGameStartRenamed (player, renameInfo) }, Cmd.none
+
+let private onGameSessionNameChangedWhenAwaitingGameStartRemoved player newName model =
+    { model with State = AwaitingGameStartRemoved { player with ValidGameSessionName = newName } }, Cmd.none
+
+let private onGameSessionNameChangedWhenJoinRequestCanceled newName model =
+    { model with State = JoinRequestCanceled newName }, Cmd.none
+
 let receiveEvent event model =
     match event, model.State with
     | PlayerAccessRequested request, ConfiguringSession state ->
@@ -68,13 +90,34 @@ let receiveEvent event model =
     | PlayerRenamed renameInfo, (AwaitingGameStart player | AwaitingGameStartRenamed (player, _))
         when player.ValidId = renameInfo.PlayerId ->
         model |> onPlayerRenamed player renameInfo
-        
+
     | PlayerRemoved playerId, (AwaitingGameStart player | AwaitingGameStartRenamed (player, _))
         when player.ValidId = playerId ->
         model |> onPlayerRemoved player
-        
+
     | PlayerRequestCanceled id, ConfiguringSession state ->
         model |> onPlayerRequestCanceled state id
+
+    | GameSessionNameChanged newName, JoiningSession player ->
+        model |> onGameSessionNameChangedWhenJoiningSession player newName |> Env.none
+
+    | GameSessionNameChanged newName, AwaitingJoinConfirmation player ->
+        model |> onGameSessionNameChangedWhenAwaitingJoinConfirmation player newName |> Env.none
+
+    | GameSessionNameChanged newName, AwaitingJoinRejected player ->
+        model |> onGameSessionNameChangedWhenAwaitingJoinRejected player newName |> Env.none
+
+    | GameSessionNameChanged newName, AwaitingGameStart player ->
+        model |> onGameSessionNameChangedWhenAwaitingGameStart player newName |> Env.none
+
+    | GameSessionNameChanged newName, AwaitingGameStartRenamed (player, renameInfo) ->
+        model |> onGameSessionNameChangedWhenAwaitingGameStartRenamed player renameInfo newName |> Env.none
+
+    | GameSessionNameChanged newName, AwaitingGameStartRemoved player ->
+        model |> onGameSessionNameChangedWhenAwaitingGameStartRemoved player newName |> Env.none
+
+    | GameSessionNameChanged newName, JoinRequestCanceled _ ->
+        model |> onGameSessionNameChangedWhenJoinRequestCanceled newName |> Env.none
 
     | _ ->
         model |> Flow.doNothing |> Env.none

@@ -27,10 +27,12 @@ type GameStartMessage =
 type ConfigMessage =
     | SetBettingType of BettingType
     | SetRaiseType of RaiseType
+    | EditSessionName
+    | ConfigInputSessionName of string
     | EditPlayerName of PlayerId
     | ConfigInputPlayerName of string
-    | AcceptPlayerNameEdit
-    | CancelPlayerNameEdit
+    | AcceptEdit
+    | CancelEdit
     | AcceptPlayerRequest of PlayerId
     | RejectPlayerRequest of PlayerId
     | RemovePlayer of PlayerId
@@ -64,10 +66,12 @@ module Message =
 
     let setBettingType = SetBettingType >> ConfigMessage
     let setRaiseType = SetRaiseType >> ConfigMessage
+    let editSessionName = EditSessionName |> ConfigMessage
+    let configInputSessionName = ConfigInputSessionName >> ConfigMessage
     let editPlayerName = EditPlayerName >> ConfigMessage
     let configInputPlayerName = ConfigInputPlayerName >> ConfigMessage
-    let acceptPlayerNameEdit = AcceptPlayerNameEdit |> ConfigMessage
-    let cancelPlayerNameEdit = CancelPlayerNameEdit |> ConfigMessage
+    let acceptEdit = AcceptEdit |> ConfigMessage
+    let cancelEdit = CancelEdit |> ConfigMessage
     let acceptPlayerRequest = AcceptPlayerRequest >> ConfigMessage
     let rejectPlayerRequest = RejectPlayerRequest >> ConfigMessage
     let removePlayer = RemovePlayer >> ConfigMessage

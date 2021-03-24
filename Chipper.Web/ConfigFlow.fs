@@ -6,7 +6,6 @@ open FsToolkit.ErrorHandling
 
 open Elmish
 
-open Chipper.Core
 open Chipper.Core.Domain
 open Chipper.Web
 
@@ -15,20 +14,6 @@ let setBettingType bettingType state =
 
 let setRaiseType raiseType state =
     Flow.updateSession { state with Config = { state.Config with ConfigRaiseType = raiseType } }
-
-let editPlayerName playerId state model =
-    let name =
-        state.Config.ConfigPlayers
-        |> List.filter (fun player -> player.Id = playerId)
-        |> List.map (fun player -> player.Name)
-        |> List.tryHead
-
-    match name with
-    | Some name -> 
-        let newState = { state with EditMode = EditPlayer (playerId, name |> PlayerName.value) }
-        { model with State = ConfiguringSession newState }, Cmd.none
-    | None ->
-        model, Cmd.none
 
 let private isUnique (players : Player list) playerName =
     players |> List.exists (fun player -> player.Name = playerName) |> not
@@ -88,6 +73,43 @@ let rejectPlayerRequest playerId state model = monad {
     return { model with State = ConfiguringSession newState }, Cmd.none
 }
 
+let editSessionName state model =
+    let (GameSessionName name) = state.Config.ConfigName
+    { model with State = ConfiguringSession { state with EditMode = EditSession name } }, Cmd.none
+
+let inputSessionName sessionName state model =
+    { model with State = ConfiguringSession { state with EditMode = EditSession sessionName } }, Cmd.none
+
+let private doAcceptSessionNameEdit newName state = monad {
+    let newState = { state with Config = { state.Config with ConfigName = newName }; EditMode = NoEdit }
+    do! Env.askMediator |>> EventMediator.post (GameSessionNameChanged newName) newState.Config.ConfigId
+
+    return newState
+}
+
+let acceptSessionNameEdit sessionName state model = monad {
+    let! newState =
+        match sessionName |> GameSessionName.create with
+        | Ok newName -> doAcceptSessionNameEdit newName state
+        | _ -> state |> Env.none
+
+    return! model |> Flow.updateSession newState
+}
+
+let editPlayerName playerId state model =
+    let name =
+        (state.Config.ConfigHost :: state.Config.ConfigPlayers)
+        |> List.filter (fun player -> player.Id = playerId)
+        |> List.map (fun player -> player.Name)
+        |> List.tryHead
+
+    match name with
+    | Some name ->
+        let newState = { state with EditMode = EditPlayer (playerId, name |> PlayerName.value) }
+        { model with State = ConfiguringSession newState }, Cmd.none
+    | None ->
+        model, Cmd.none
+
 let inputPlayerName playerName editedName state model =
     { model with State = ConfiguringSession { state with EditMode = EditPlayer (playerName, editedName) } }, Cmd.none
 
@@ -123,13 +145,15 @@ let acceptPlayerNameEdit playerName editedName state model = monad {
     return! model |> Flow.updateSession newState
 }
 
-let cancelPlayerNameEdit state model =
+let cancelEdit state model =
     { model with State = ConfiguringSession { state with EditMode = NoEdit } }, Cmd.none
 
 let isEditedPlayerNameValid players playerId editedName =
     match editedName |> PlayerName.create with
     | Ok name -> players |> List.forall (fun (player : Player) -> player.Id = playerId || player.Name <> name)
     | _ -> false
+
+let isEditedSessionNameValid = GameSessionName.create >> function Ok _ -> true | _ -> false
 
 let removePlayer playerId state model = monad {
     let players = state.Config.ConfigPlayers |> List.filter (fun player -> player.Id <> playerId)

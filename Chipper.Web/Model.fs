@@ -16,6 +16,7 @@ type Page =
 type ConfigSessionEditMode =
     | NoEdit
     | EditPlayer of PlayerId * string
+    | EditSession of string
 
 type ConfigSessionState = {
     Config : GameSessionConfig

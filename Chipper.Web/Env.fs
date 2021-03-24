@@ -3,8 +3,6 @@ namespace Chipper.Web
 open FSharpPlus
 open FSharpPlus.Data
 
-open Elmish
-
 open Chipper.Core.Persistence
 
 type Env = {

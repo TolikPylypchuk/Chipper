@@ -9,6 +9,7 @@ type Event =
     | PlayerRenamed of PlayerRenameInfo
     | PlayerRemoved of PlayerId
     | PlayerRequestCanceled of PlayerId
+    | GameSessionNameChanged of GameSessionName
 
 type GameSessionEvent = {
     GameSessionId : GameSessionId
