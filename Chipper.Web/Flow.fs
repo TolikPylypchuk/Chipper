@@ -120,14 +120,16 @@ let getSessionToJoin id = monad {
     result |> Async.map (asMessage page)
 }
 
-let setJoinPage id page model = monad {
-    let! session = getSessionToJoin id
-    return { model with Page = page }, Cmd.OfAsync.result session
-}
-
 let createEventLoop id = monad {
     let! mediator = Env.askMediator
     return Cmd.ofSub (fun dispatch -> mediator |> EventMediator.subscribe id (Message.receiveEvent >> dispatch))
+}
+
+let setJoinPage id page model = monad {
+    let! session = getSessionToJoin id
+    let! loop = createEventLoop (GameSessionId id)
+
+    return { model with Page = page }, Cmd.batch [ loop; Cmd.OfAsync.result session ]
 }
 
 let loadState state model =

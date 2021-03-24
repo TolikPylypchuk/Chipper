@@ -80,9 +80,7 @@ let requestAccess player joinInfo model = monad {
     let! env = Reader.ask
     let execRequest = Cmd.OfAsync.perform (fun env -> request |>> flip Reader.run env) env Message.setModel
 
-    let! loop = Flow.createEventLoop player.GameSessionId
-
-    return model, Cmd.batch [ execRequest; loop ]
+    return model, execRequest
 }
 
 let requestAccessAgain player joinInfo model = monad {
