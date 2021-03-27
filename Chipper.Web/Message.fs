@@ -25,8 +25,6 @@ type GameStartMessage =
     | CancelRequest
 
 type ConfigMessage =
-    | SetBettingType of BettingType
-    | SetRaiseType of RaiseType
     | EditSessionName
     | ConfigInputSessionName of string
     | EditPlayerName of PlayerId
@@ -64,8 +62,6 @@ module Message =
     let acceptRename = AcceptRename |> GameStartMessage
     let cancelRequest = CancelRequest |> GameStartMessage
 
-    let setBettingType = SetBettingType >> ConfigMessage
-    let setRaiseType = SetRaiseType >> ConfigMessage
     let editSessionName = EditSessionName |> ConfigMessage
     let configInputSessionName = ConfigInputSessionName >> ConfigMessage
     let editPlayerName = EditPlayerName >> ConfigMessage

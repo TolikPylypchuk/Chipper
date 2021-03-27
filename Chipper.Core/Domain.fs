@@ -32,22 +32,6 @@ type BettingRound = {
     Moves : Move list
 }
 
-type RaiseType =
-    | Limit
-    | NoLimit
-    | PotLimit
-
-type BlindBets = {
-    SmallBlind : BetAmount
-    BigBlind : BetAmount
-}
-
-type AnteBet = AnteBet of BetAmount
-
-type BettingType =
-    | Blinds
-    | Antes
-
 type GameId = GameId of Guid
 
 type Game = {
@@ -89,8 +73,6 @@ type GameSessionConfig = {
     ConfigDate : DateTime
     ConfigHost : Player
     ConfigPlayers : Player list
-    ConfigRaiseType : RaiseType
-    ConfigBettingType : BettingType
 }
 
 type GameSession = private {
@@ -98,8 +80,6 @@ type GameSession = private {
     Name : GameSessionName
     Date : DateTime
     Players : NonEmptyList<Player>
-    RaiseType : RaiseType
-    BettingType : BettingType
     Games : Game list
 }
 
@@ -192,8 +172,6 @@ module GameSession =
             ConfigHost = { Id = hostId; Name = hostName; Chips = [] }
             ConfigPlayers = []
             ConfigPlayerRequests = []
-            ConfigRaiseType = NoLimit
-            ConfigBettingType = Blinds
         }
 
     let fromConfig config =
@@ -204,8 +182,6 @@ module GameSession =
                 Name = config.ConfigName
                 Date = config.ConfigDate
                 Players = NonEmptyList.create config.ConfigHost config.ConfigPlayers
-                RaiseType = config.ConfigRaiseType
-                BettingType = config.ConfigBettingType
                 Games = []
             } |> Ok
         else
@@ -213,8 +189,6 @@ module GameSession =
 
     let id session = session.Id
     let players session = session.Players
-    let raiseType session = session.RaiseType
-    let bettingType session = session.BettingType
     let games session = session.Games
 
     let name (GameSessionName name) = name

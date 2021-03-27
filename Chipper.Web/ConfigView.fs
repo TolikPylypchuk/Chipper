@@ -179,59 +179,6 @@ let private configurePagePlayerRequests state dispatch =
         ]
     ]
 
-let private configurePageBettingType state dispatch =
-    section [ attr.class' "col-md-auto m-2 m-md-4" ] [
-        h6 [] [
-            text <| "Betting Type"
-        ]
-
-        forEach [ Blinds; Antes ] <| fun betType ->
-            let inputId = sprintf "bet-%O" betType
-            div [ attr.class' "form-check" ] [
-                input [
-                    attr.id <| inputId
-                    attr.name "bet"
-                    attr.type' "radio"
-                    attr.class' "form-check-input"
-                    attr.checked' (state.Config.ConfigBettingType = betType)
-                    bind.change.string (string betType) (fun _ -> dispatch <| Message.setBettingType betType)
-                ]
-
-                label [ attr.for' inputId; attr.class' "form-check-label" ] [
-                    text <| match betType with Blinds -> "Blinds" | Antes -> "Antes"
-                ]
-            ]
-    ]
-
-let private configurePageRaiseType state dispatch =
-    section [ attr.class' "col-md-auto m-2 m-md-4" ] [
-        h6 [] [
-            text <| "Raise Type"
-        ]
-
-        forEach [ NoLimit; Limit; PotLimit ] <| fun raiseType ->
-            let inputId = sprintf "raise-%O" raiseType
-
-            div [ attr.class' "form-check" ] [
-                input [
-                    attr.id <| inputId
-                    attr.name "raise"
-                    attr.type' "radio"
-                    attr.class' "form-check-input"
-                    attr.checked' (state.Config.ConfigRaiseType = raiseType)
-                    bind.change.string (string raiseType) (fun _ -> dispatch <| Message.setRaiseType raiseType)
-                ]
-
-                label [ attr.for' inputId; attr.class' "form-check-label" ] [
-                    match raiseType with
-                    | Limit -> "Limited"
-                    | NoLimit -> "Unlimited"
-                    | PotLimit -> "Pot-limited"
-                    |> text
-                ]
-            ]
-    ]
-    
 let configurePage js state joinUrl isSessionNameValid isPlayerNameValid dispatch =
     div [ attr.class' "container" ] [
         configurePageHeader js state joinUrl isSessionNameValid dispatch
@@ -239,11 +186,6 @@ let configurePage js state joinUrl isSessionNameValid isPlayerNameValid dispatch
         div [ attr.class' "row justify-content-md-center" ] [
             configurePagePlayers state isPlayerNameValid dispatch
             configurePagePlayerRequests state dispatch
-        ]
-
-        div [ attr.class' "row justify-content-md-center" ] [
-            configurePageBettingType state dispatch
-            configurePageRaiseType state dispatch
         ]
 
         div [ attr.class' "d-flex flex-row justify-content-center m-2" ] [

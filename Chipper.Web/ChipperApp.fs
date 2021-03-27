@@ -91,12 +91,6 @@ let updateGameStart message model =
 
 let updateConfig message model =
     match message, model.State with
-    | SetBettingType bettingType, ConfiguringSession state ->
-        model |> ConfigFlow.setBettingType bettingType state
-
-    | SetRaiseType raiseType, ConfiguringSession state ->
-        model |> ConfigFlow.setRaiseType raiseType state
-
     | AcceptPlayerRequest playerName, ConfiguringSession state ->
         model |> ConfigFlow.acceptPlayerRequest playerName state
 

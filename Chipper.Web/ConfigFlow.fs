@@ -9,12 +9,6 @@ open Elmish
 open Chipper.Core.Domain
 open Chipper.Web
 
-let setBettingType bettingType state =
-    Flow.updateSession { state with Config = { state.Config with ConfigBettingType = bettingType } }
-
-let setRaiseType raiseType state =
-    Flow.updateSession { state with Config = { state.Config with ConfigRaiseType = raiseType } }
-
 let private isUnique (players : Player list) playerName =
     players |> List.exists (fun player -> player.Name = playerName) |> not
 
