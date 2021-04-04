@@ -47,36 +47,39 @@ let acceptPlayerRequest playerId state model = monad {
                     }
             }
 
-        do! Env.askMediator |>> EventMediator.post (PlayerAccepted playerId) newState.Config.ConfigId
+        do! PlayerAccepted playerId |> postEvent newState.Config.ConfigId
+
+        let! result = model |> Flow.updateSession newState
 
         if actualName <> name then
             let renameInfo = { PlayerId = playerId; NewName = actualName; HostName = PlayerName.theGame }
-            do! Env.askMediator |>> EventMediator.post (PlayerRenamed renameInfo) newState.Config.ConfigId
-
-        return! model |> Flow.updateSession newState
+            do! PlayerRenamed renameInfo |> postEvent newState.Config.ConfigId
+            return result
+        else
+            return result
     | None ->
-        return model, Cmd.none
+        return model
 }
 
 let rejectPlayerRequest playerId state model = monad {
     let playerRequests = state.Config.ConfigPlayerRequests |> List.filter (fun request -> request.PlayerId <> playerId)
     let newState = { state with Config = { state.Config with ConfigPlayerRequests = playerRequests } }
-    
-    do! Env.askMediator |>> EventMediator.post (PlayerRejected playerId) newState.Config.ConfigId
 
-    return { model with State = ConfiguringSession newState }, Cmd.none
+    do! PlayerRejected playerId |> postEvent newState.Config.ConfigId
+
+    return { model with State = ConfiguringSession newState }
 }
 
 let editSessionName state model =
     let (GameSessionName name) = state.Config.ConfigName
-    { model with State = ConfiguringSession { state with EditMode = EditSession name } }, Cmd.none
+    { model with State = ConfiguringSession { state with EditMode = EditSession name } } |> pureFlow
 
 let inputSessionName sessionName state model =
-    { model with State = ConfiguringSession { state with EditMode = EditSession sessionName } }, Cmd.none
+    { model with State = ConfiguringSession { state with EditMode = EditSession sessionName } } |> pureFlow
 
-let private doAcceptSessionNameEdit newName state = monad {
+let private doAcceptSessionNameEdit newName state : Flow<ConfigSessionState> = monad {
     let newState = { state with Config = { state.Config with ConfigName = newName }; EditMode = NoEdit }
-    do! Env.askMediator |>> EventMediator.post (GameSessionNameChanged newName) newState.Config.ConfigId
+    do! GameSessionNameChanged newName |> postEvent newState.Config.ConfigId
 
     return newState
 }
@@ -85,7 +88,7 @@ let acceptSessionNameEdit sessionName state model = monad {
     let! newState =
         match sessionName |> GameSessionName.create with
         | Ok newName -> doAcceptSessionNameEdit newName state
-        | _ -> state |> Env.none
+        | _ -> state |> pureFlow
 
     return! model |> Flow.updateSession newState
 }
@@ -100,14 +103,15 @@ let editPlayerName playerId state model =
     match name with
     | Some name ->
         let newState = { state with EditMode = EditPlayer (playerId, name |> PlayerName.value) }
-        { model with State = ConfiguringSession newState }, Cmd.none
+        { model with State = ConfiguringSession newState }
     | None ->
-        model, Cmd.none
+        model
+    |> pureFlow
 
 let inputPlayerName playerName editedName state model =
-    { model with State = ConfiguringSession { state with EditMode = EditPlayer (playerName, editedName) } }, Cmd.none
+    { model with State = ConfiguringSession { state with EditMode = EditPlayer (playerName, editedName) } } |> pureFlow
 
-let private doAcceptPlayerNameEdit playerId newName state = monad {
+let private doAcceptPlayerNameEdit playerId newName state : Flow<ConfigSessionState> = monad {
     let newPlayers =
         state.Config.ConfigPlayers
         |> List.map (fun player -> if player.Id = playerId then { player with Name = newName } else player)
@@ -125,7 +129,7 @@ let private doAcceptPlayerNameEdit playerId newName state = monad {
         }
 
     let renameInfo =  { HostName = newState.Config.ConfigHost.Name; PlayerId = playerId; NewName = newName }
-    do! Env.askMediator |>> EventMediator.post (PlayerRenamed renameInfo) newState.Config.ConfigId
+    do! PlayerRenamed renameInfo |> postEvent newState.Config.ConfigId
 
     return newState
 }
@@ -134,13 +138,13 @@ let acceptPlayerNameEdit playerName editedName state model = monad {
     let! newState =
         match editedName |> PlayerName.create with
         | Ok newName -> doAcceptPlayerNameEdit playerName newName state
-        | _ -> state |> Env.none
+        | _ -> state |> pureFlow
 
     return! model |> Flow.updateSession newState
 }
 
 let cancelEdit state model =
-    { model with State = ConfiguringSession { state with EditMode = NoEdit } }, Cmd.none
+    { model with State = ConfiguringSession { state with EditMode = NoEdit } } |> pureFlow
 
 let isEditedPlayerNameValid players playerId editedName =
     match editedName |> PlayerName.create with
@@ -153,7 +157,7 @@ let removePlayer playerId state model = monad {
     let players = state.Config.ConfigPlayers |> List.filter (fun player -> player.Id <> playerId)
     let newState = { state with Config = { state.Config with ConfigPlayers = players } }
     
-    do! Env.askMediator |>> EventMediator.post (PlayerRemoved playerId) newState.Config.ConfigId
+    do! PlayerRemoved playerId |> postEvent newState.Config.ConfigId
 
     return! model |> Flow.updateSession newState
 }

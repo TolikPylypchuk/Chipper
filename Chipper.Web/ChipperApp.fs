@@ -15,63 +15,67 @@ open Bolero.Html
 open Chipper.Core.Domain
 open Chipper.Core.Persistence
 
-let init = monad {
-    let! env = Reader.ask
-
+let init : Flow<Model> = monad {
     let model = { Page = HomePage; State = NoState; LocalState = None; IsLoaded = false }
-    let cmd = Cmd.OfAsync.perform (Reader.run Flow.getState) env Message.loadLocalState
+    do! asyncCmd (Flow.getState |>> Async.map Message.loadLocalState)
 
-    return model, cmd
+    return model
 }
 
 let updateGeneric message model =
     match message, model.State with
+    | NoMessage, _ ->
+        model |> pureFlow
     | SetError e, _ ->
-        model |> Flow.setError e |> Env.none
-    | SetPage (JoinPage id as page), (AwaitingJoinConfirmation _ | AwaitingGameStart _)  ->
-        model |> Flow.setPage page |> Env.none
+        model |> Flow.setError e
+    | SetPage (JoinPage _ as page), (AwaitingJoinConfirmation _ | AwaitingGameStart _)  ->
+        model |> Flow.setPage page
     | SetPage (JoinPage id as page), _  ->
         model |> Flow.setJoinPage id page
     | SetPage page, _  ->
-        model |> Flow.setPage page |> Env.none
+        model |> Flow.setPage page
     | LoadLocalState state, _  ->
         model |> Flow.loadState state
     | RecoverLocalState, _  ->
         model |> Flow.recoverLocalState
     | IgnoreLocalState, _  ->
-        model |> Flow.ignoreLocalState |> Env.none
+        model |> Flow.ignoreLocalState
     | ClearLocalState, _  ->
         model |> Flow.clearLocalState
     | SetModel model, _  ->
-        model |> Flow.doNothing |> Env.none
+        model |> pureFlow
     | ReceiveEvent event, _  ->
         model |> EventFlow.receiveEvent event
+    | CustomMessage (:? Flow<Model> as flow), _ ->
+        flow
+    | CustomMessage _, _ ->
+        model |> pureFlow
 
 let updateGameStart message model =
     match message, model.State with
     | StartGameSession, ConfiguringSession _ ->
-        model |> GameStartFlow.startSessionWhenConfiguring |> Env.none
+        model |> GameStartFlow.startSessionWhenConfiguring
 
     | StartGameSession, _ ->
-        model |> GameStartFlow.startSession |> Env.none
+        model |> GameStartFlow.startSession
 
     | InputSessionName name, AddingSessionName (_, playerName) ->
-        model |> GameStartFlow.inputSessionName name playerName |> Env.none
+        model |> GameStartFlow.inputSessionName name playerName
 
     | InputPlayerName playerName, AddingSessionName (name, _) ->
-        model |> GameStartFlow.inputPlayerNameWhenAddingSessionName name playerName |> Env.none
+        model |> GameStartFlow.inputPlayerNameWhenAddingSessionName name playerName
 
     | SaveSessionName, AddingSessionName (name, playerName) ->
         model |> GameStartFlow.saveSessionName name playerName
 
     | SaveSessionName, ConfiguringSession _ ->
-        model |> GameStartFlow.saveSessionNameWhenConfiguring |> Env.none
+        model |> GameStartFlow.saveSessionNameWhenConfiguring
 
     | SessionSaved config, _ ->
         model |> GameStartFlow.onSessionSaved config
 
     | InputPlayerName name, JoiningSession { GameSessionId = id; GameSessionName = sessionName } ->
-        model |> GameStartFlow.inputPlayerNameWhenJoiningSession id sessionName name |> Env.none
+        model |> GameStartFlow.inputPlayerNameWhenJoiningSession id sessionName name
 
     | RequestAccess joinInfo, JoiningSession player ->
         model |> GameStartFlow.requestAccess player joinInfo
@@ -80,14 +84,14 @@ let updateGameStart message model =
         model |> GameStartFlow.requestAccessAgain player request
 
     | AcceptRename, AwaitingGameStartRenamed (player, _) ->
-        model |> GameStartFlow.acceptRename player |> Env.none
-        
+        model |> GameStartFlow.acceptRename player
+
     | CancelRequest,
       (AwaitingGameStart player | AwaitingJoinConfirmation player | AwaitingGameStartRenamed (player, _)) ->
         model |> GameStartFlow.cancelRequest player
 
     | _ ->
-        model |> Flow.doNothing |> Env.none
+        model |> pureFlow
 
 let updateConfig message model =
     match message, model.State with
@@ -98,16 +102,16 @@ let updateConfig message model =
         model |> ConfigFlow.rejectPlayerRequest playerName state
 
     | EditSessionName, ConfiguringSession state ->
-        model |> ConfigFlow.editSessionName state |> Env.none
+        model |> ConfigFlow.editSessionName state
 
     | ConfigInputSessionName editedName, ConfiguringSession ({ EditMode = EditSession _ } as state) ->
-        model |> ConfigFlow.inputSessionName editedName state |> Env.none
+        model |> ConfigFlow.inputSessionName editedName state
 
     | EditPlayerName playerId, ConfiguringSession state ->
-        model |> ConfigFlow.editPlayerName playerId state |> Env.none
+        model |> ConfigFlow.editPlayerName playerId state
 
     | ConfigInputPlayerName editedName, ConfiguringSession ({ EditMode = EditPlayer (playerId, _) } as state) ->
-        model |> ConfigFlow.inputPlayerName playerId editedName state |> Env.none
+        model |> ConfigFlow.inputPlayerName playerId editedName state
         
     | AcceptEdit, ConfiguringSession ({ EditMode = EditSession sessionName } as state) ->
         model |> ConfigFlow.acceptSessionNameEdit sessionName state
@@ -116,13 +120,13 @@ let updateConfig message model =
         model |> ConfigFlow.acceptPlayerNameEdit playerId editedName state
 
     | CancelEdit, ConfiguringSession state ->
-        model |> ConfigFlow.cancelEdit state |> Env.none
+        model |> ConfigFlow.cancelEdit state
 
     | RemovePlayer playerName, ConfiguringSession state ->
         model |> ConfigFlow.removePlayer playerName state
 
     | _ ->
-        model |> Flow.doNothing |> Env.none
+        model |> pureFlow
 
 let update message model =
     match message with
@@ -204,8 +208,8 @@ type AppComponent() =
 
         let env = { Storage = storage; Repo = repo; Mediator = mediator }
 
-        let init _ = Reader.run init env
-        let update = fun message model -> Reader.run (update message model) env
+        let init _ = init |> Flow.run env
+        let update = fun message model -> update message model |> Flow.run env
         let view = view this.JSRuntime createJoinUrl
 
         Program.mkProgram init update view

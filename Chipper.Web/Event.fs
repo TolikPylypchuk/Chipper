@@ -1,5 +1,7 @@
 namespace Chipper.Web
 
+open Elmish
+
 open Chipper.Core.Domain
 
 type Event =

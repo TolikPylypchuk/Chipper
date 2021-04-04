@@ -51,11 +51,25 @@ let settings (services: IServiceProvider) =
 
 let localStorage (services : IServiceProvider) =
     let localStorage = services.GetRequiredService<ILocalStorageService>()
-    
+
     {
-        GetState = fun () -> LocalStorage.getLocalState localStorage
-        SetState = LocalStorage.setLocalState localStorage
-        ClearState = fun () -> LocalStorage.clearLocalState localStorage
+        GetState = fun () ->
+            async {
+                let! containsState = await <| localStorage.ContainKeyAsync(nameof LocalState)
+                if containsState then
+                    try return! await <| localStorage.GetItemAsync<LocalState>(nameof LocalState)
+                    with e ->
+                        printfn "%O" e
+                        return NoState
+                else
+                    return NoState
+            }
+
+        SetState = fun state ->
+            await' <| localStorage.SetItemAsync(nameof LocalState, state)
+
+        ClearState = fun () ->
+            await' <| localStorage.RemoveItemAsync(nameof LocalState)
     }
 
 let inMemoryRepository () =

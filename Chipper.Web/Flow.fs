@@ -1,6 +1,7 @@
 module Chipper.Web.Flow
 
 open FSharpPlus
+open FSharpPlus.Data
 
 open FsToolkit.ErrorHandling
 open Elmish
@@ -9,14 +10,17 @@ open Chipper.Core
 open Chipper.Core.Domain
 open Chipper.Core.Persistence
 
-let doNothing model = model, Cmd.none
+let run env flow =
+    ReaderT.run flow env
+    |> Writer.run
+    |> Tuple2.mapItem2 (function [] -> Cmd.none | [ cmd ] -> cmd | cmds -> Cmd.batch cmds)
 
 let setPage page model =
-    { model with Page = page }, Cmd.none
+    { model with Page = page } |> pureFlow
 
-let setError e model =
+let setError e model : Flow<Model> =
     printfn "An unhandled error appeared: %O" e
-    model |> doNothing
+    model |> pureFlow
 
 let asMessage page =
     function
@@ -69,12 +73,12 @@ let private getGameStartState repo player = async {
         return None
 }
 
-let getState = monad {
+let getState : Flow<Async<LocalState>> = monad {
     let! storage = Env.askStorage
     let! repo = Env.askRepo
 
     return async {
-        let! localState = storage.GetState ()
+        let! localState = storage |> LocalStorage.getState
         let! currentState =
             match localState with
             | ConfiguringSession { Config = config } -> config |> getConfigSessionState repo
@@ -85,21 +89,25 @@ let getState = monad {
         match currentState with
         | Some state ->
             if state <> localState then
-                do! storage.SetState state
+                do! storage |> LocalStorage.setState state
             return state
         | None ->
-            do! storage.ClearState ()
+            do! storage |> LocalStorage.clearState
             return NoState
     }
 }
 
-let setStateSimple state =
-    Env.askStorage |>> fun storage -> storage.SetState state |> Async.StartImmediate
+let setStateSimple state : Flow<unit> = monad {
+    let! storage = Env.askStorage
+    do! cmd <| Cmd.OfAsync.perform (LocalStorage.setState state) storage withNoMessage
+}
 
-let clearStateSimple =
-    Env.askStorage |>> fun storage -> storage.ClearState () |> Async.StartImmediate
+let clearStateSimple : Flow<unit> = monad {
+    let! storage = Env.askStorage
+    do! cmd <| Cmd.OfAsync.perform LocalStorage.clearState storage withNoMessage
+}
 
-let getSessionToJoin id = monad {
+let getSessionToJoin id : Flow<Async<Message>> = monad {
     let! repo = Env.askRepo
     let page = JoinPage id
     let id = GameSessionId id
@@ -120,56 +128,74 @@ let getSessionToJoin id = monad {
     result |> Async.map (asMessage page)
 }
 
-let createEventLoop id = monad {
+let createEventLoop id : Flow<unit> = monad {
     let! mediator = Env.askMediator
-    return Cmd.ofSub (fun dispatch -> mediator |> EventMediator.subscribe id (Message.receiveEvent >> dispatch))
+    do! cmd <| Cmd.ofSub (fun dispatch -> mediator |> EventMediator.subscribe id (Message.receiveEvent >> dispatch))
 }
 
-let setJoinPage id page model = monad {
-    let! session = getSessionToJoin id
-    let! loop = createEventLoop (GameSessionId id)
+let setJoinPage id page model : Flow<Model> = monad {
+    do! asyncCmd <| getSessionToJoin id
+    do! createEventLoop (GameSessionId id)
 
-    return { model with Page = page }, Cmd.batch [ loop; Cmd.OfAsync.result session ]
+    return { model with Page = page }
+}
+
+let private loadJoinPageAwaitingState player state model : Flow<Model> = monad {
+    let id = player.ValidGameSessionId
+    do! createEventLoop id
+    return { model with State = state; LocalState = None; IsLoaded = true }
+}
+
+let private loadConfiguringState id state model : Flow<Model> = monad {
+    do! createEventLoop id
+    return { model with State = state; LocalState = None; IsLoaded = true }
 }
 
 let loadState state model =
     match model.Page, state with
     | StartPage, state ->
         let newState = AddingSessionName ("", "")
-        ({ model with State = newState; LocalState = Some state; IsLoaded = true }, Cmd.none) |> Env.none
+        { model with State = newState; LocalState = Some state; IsLoaded = true } |> pureFlow
     | JoinPage _, NoState ->
-        ({ model with LocalState = None; IsLoaded = true }, Cmd.none) |> Env.none
+        { model with LocalState = None; IsLoaded = true } |> pureFlow
     | JoinPage _, (AwaitingJoinConfirmation player | AwaitingGameStart player as state) ->
-        let id = player.ValidGameSessionId
-        createEventLoop id |>> fun loop -> { model with State = state; LocalState = None; IsLoaded = true }, loop
+        model |> loadJoinPageAwaitingState player state
     | ConfigurePage, (ConfiguringSession { Config = { ConfigId = id } } as state) ->
-        createEventLoop id |>> fun loop -> { model with State = state; LocalState = None; IsLoaded = true }, loop
+        model |> loadConfiguringState id state
     | _, NoState ->
-        ({ model with Page = HomePage; LocalState = None; IsLoaded = true }, Cmd.none) |> Env.none
+        { model with Page = HomePage; LocalState = None; IsLoaded = true } |> pureFlow
     | _ ->
-        ({ model with Page = HomePage; LocalState = Some state; IsLoaded = true }, Cmd.none) |> Env.none
+        { model with Page = HomePage; LocalState = Some state; IsLoaded = true } |> pureFlow
+
+let private recoverConfiguringSession id state model : Flow<Model> = monad {
+    do! createEventLoop id
+    return { model with Page = ConfigurePage; State = state; LocalState = None }
+}
+
+let private recoverJoinAwaitingConfirmation player state model : Flow<Model> = monad {
+    do! createEventLoop player.ValidGameSessionId
+    let (GameSessionId rawId) = player.ValidGameSessionId
+    return { model with Page = JoinPage rawId; State = state; LocalState = None }
+}
 
 let recoverLocalState model =
     match model.LocalState with
     | Some (ConfiguringSession { Config = { ConfigId = id } } as state) ->
-        createEventLoop id |>> fun loop -> { model with Page = ConfigurePage; State = state; LocalState = None }, loop
+        model |> recoverConfiguringSession id state
     | Some (AwaitingJoinConfirmation player | AwaitingGameStart player as state) ->
-        createEventLoop player.ValidGameSessionId |>> fun loop ->
-            let (GameSessionId rawId) = player.ValidGameSessionId
-            { model with Page = JoinPage rawId; State = state; LocalState = None }, loop
+        model |> recoverJoinAwaitingConfirmation player state
     | _ ->
-        ({ model with LocalState = None }, Cmd.none) |> Env.none
+        { model with LocalState = None } |> pureFlow
 
 let ignoreLocalState model =
-    { model with LocalState = None }, Cmd.none
+    { model with LocalState = None } |> pureFlow
 
-let clearLocalState model = monad {
-    let! storage = Env.askStorage
-    Async.StartImmediate <| storage.ClearState ()
-    return model |> ignoreLocalState
+let clearLocalState model : Flow<Model> = monad {
+    do! clearStateSimple
+    return! model |> ignoreLocalState
 }
 
-let updateSession state model = monad {
+let updateSession state model : Flow<Model> = monad {
     let! storage = Env.askStorage
     let! repo = Env.askRepo
 
@@ -180,5 +206,7 @@ let updateSession state model = monad {
         return Message.setModel { model with Page = ConfigurePage; State = localState }
     }
 
-    return model, result |> Message.handleAsyncError |> Cmd.OfAsync.result
+    do! cmd (result |> Message.handleAsyncError |> Cmd.OfAsync.result)
+
+    return model
 }

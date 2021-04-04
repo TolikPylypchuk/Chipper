@@ -1,9 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
-
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
   </PropertyGroup>
-
   <ItemGroup>
     <Compile Include="Util.fs" />
     <Compile Include="AppSettings.fs" />
@@ -16,7 +14,8 @@
     <Compile Include="GameStartView.fs" />
     <Compile Include="ConfigView.fs" />
     <Compile Include="LocalStorage.fs" />
-    <Compile Include="Env.fs" />
+    <Compile Include="FlowEnv.fs" />
+    <Compile Include="FlowUtil.fs" />
     <Compile Include="Flow.fs" />
     <Compile Include="EventFlow.fs" />
     <Compile Include="GameStartFlow.fs" />
@@ -25,7 +24,6 @@
     <Compile Include="Services.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="Blazored.LocalStorage" Version="3.0.0" />
     <PackageReference Include="Bolero.Server" Version="0.16.27" />
@@ -39,19 +37,15 @@
     <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="5.0.1" />
     <PackageReference Include="Microsoft.Web.LibraryManager.Build" Version="2.1.113" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\Chipper.Core\Chipper.Core.fsproj" />
   </ItemGroup>
-
   <ItemGroup>
     <PackageReference Update="FSharp.Core" Version="5.0.1" />
   </ItemGroup>
-
   <ItemGroup>
     <Folder Include="wwwroot\img\chips\" />
   </ItemGroup>
-
   <PropertyGroup>
     <LibSassBuilderArgs>./wwwroot/css</LibSassBuilderArgs>
   </PropertyGroup>

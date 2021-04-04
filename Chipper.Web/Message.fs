@@ -4,6 +4,7 @@ open Chipper.Core
 open Chipper.Core.Domain
 
 type GenericMessage =
+    | NoMessage
     | SetPage of Page
     | SetError of ChipperError
     | LoadLocalState of LocalState
@@ -12,6 +13,7 @@ type GenericMessage =
     | ClearLocalState
     | SetModel of Model
     | ReceiveEvent of Event
+    | CustomMessage of obj
 
 type GameStartMessage =
     | StartGameSession
@@ -43,6 +45,7 @@ type Message =
 [<RequireQualifiedAccess>]
 module Message =
 
+    let noMessage = NoMessage |> GenericMessage
     let setPage = SetPage >> GenericMessage
     let setError = SetError >> GenericMessage
     let loadLocalState = LoadLocalState >> GenericMessage
@@ -51,6 +54,7 @@ module Message =
     let clearLocalState = ClearLocalState |> GenericMessage
     let setModel = SetModel >> GenericMessage
     let receiveEvent = ReceiveEvent >> GenericMessage
+    let custom = CustomMessage >> GenericMessage
 
     let startGameSession = StartGameSession |> GameStartMessage
     let inputSessionName = InputSessionName >> GameStartMessage

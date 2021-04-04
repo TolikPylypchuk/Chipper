@@ -3,7 +3,7 @@ module Chipper.Core.Domain
 open System
 
 open FSharpPlus
-open FSharpx.Collections
+open FSharpPlus.Data
 
 type Chip = private Chip of int
 

@@ -12,22 +12,22 @@ open Chipper.Core.Domain
 open Chipper.Web
 
 let startSession model =
-    { model with Page = StartPage; State = AddingSessionName ("", "") }, Cmd.none
+    { model with Page = StartPage; State = AddingSessionName ("", "") } |> pureFlow
 
 let startSessionWhenConfiguring model =
-    { model with Page = StartPage }, Cmd.none
+    { model with Page = StartPage } |> pureFlow
 
 let inputSessionName name playerName model =
-    { model with State = AddingSessionName (name, playerName) }, Cmd.none
+    { model with State = AddingSessionName (name, playerName) } |> pureFlow
 
 let inputPlayerNameWhenAddingSessionName name playerName model =
-    { model with State = AddingSessionName (name, playerName) }, Cmd.none
+    { model with State = AddingSessionName (name, playerName) } |> pureFlow
 
 let inputPlayerNameWhenJoiningSession id sessionName name model =
     let state = JoiningSession { GameSessionId = id; GameSessionName = sessionName; Name = name }
-    { model with State = state }, Cmd.none
+    { model with State = state } |> pureFlow
 
-let saveNewSession name playerName' = monad {
+let saveNewSession name playerName' : Flow<Async<Message>> = monad {
     let! repo = Env.askRepo
 
     let result = asyncResult {
@@ -41,32 +41,32 @@ let saveNewSession name playerName' = monad {
     return result |> Message.handleAsyncError
 }
 
-let saveSessionName name playerName model = monad {
-    let! newSession = saveNewSession name playerName
-    return model, Cmd.OfAsync.result newSession
+let saveSessionName name playerName model : Flow<Model> = monad {
+    do! asyncCmd <| saveNewSession name playerName
+    return model
 }
 
 let saveSessionNameWhenConfiguring model =
-    { model with Page = ConfigurePage }, Cmd.none
+    { model with Page = ConfigurePage } |> pureFlow
 
-let onSessionSaved config model = monad {
+let onSessionSaved config model : Flow<Model> = monad {
     let state = ConfiguringSession { Config = config; EditMode = NoEdit }
 
     do! Flow.setStateSimple state
-    let! loop = Flow.createEventLoop config.ConfigId
+    do! Flow.createEventLoop config.ConfigId
 
-    return { model with Page = ConfigurePage; State = state }, loop
+    return { model with Page = ConfigurePage; State = state }
 }
 
-let private doRequestAccess player request = monad {
-    do! Env.askMediator |>> EventMediator.post (PlayerAccessRequested request) player.ValidGameSessionId
+let private doRequestAccess player request : Flow<LocalState> = monad {
+    do! PlayerAccessRequested request |> postEvent player.ValidGameSessionId
     return AwaitingJoinConfirmation player
 }
 
 let requestAccess player joinInfo model = monad {
     let! repo = Env.askRepo
 
-    let request = async {
+    let request : Async<Flow<Model>> = async {
         let! id = repo.GeneratePlayerId ()
         let request = { PlayerId = id; Info = joinInfo }
         let validPlayer = player |> ValidJoiningPlayer.create request
@@ -77,22 +77,20 @@ let requestAccess player joinInfo model = monad {
         }
     }
 
-    let! env = Reader.ask
-    let execRequest = Cmd.OfAsync.perform (fun env -> request |>> flip Reader.run env) env Message.setModel
-
-    return model, execRequest
+    do! continueWithAsync request
+    return model
 }
 
-let requestAccessAgain player joinInfo model = monad {
+let requestAccessAgain player joinInfo model : Flow<Model> = monad {
     let! newState = doRequestAccess player joinInfo
-    return { model with State = newState }, Cmd.none
+    return { model with State = newState }
 }
 
 let acceptRename player model =
-    { model with State = AwaitingGameStart player }, Cmd.none
+    { model with State = AwaitingGameStart player } |> pureFlow
 
-let cancelRequest player model = monad {
+let cancelRequest player model : Flow<Model> = monad {
     do! Flow.clearStateSimple
-    do! Env.askMediator |>> EventMediator.post (PlayerRequestCanceled player.ValidId) player.ValidGameSessionId
-    return { model with State = JoinRequestCanceled player.ValidGameSessionName }, Cmd.none
+    do! PlayerRequestCanceled player.ValidId |> postEvent player.ValidGameSessionId
+    return { model with State = JoinRequestCanceled player.ValidGameSessionName }
 }

@@ -2,8 +2,6 @@ module Chipper.Web.EventFlow
 
 open FSharpPlus
 
-open Elmish
-
 open Chipper.Core.Domain
 
 let private onPlayerAccessRequested state request model = monad {
@@ -15,26 +13,26 @@ let private onPlayerAccessRequested state request model = monad {
     return! { model with State = localState } |> Flow.updateSession newState
 }
 
-let private onPlayerAccepted player model = monad {
+let private onPlayerAccepted player model : Flow<Model> = monad {
     let newState = AwaitingGameStart player
     do! Flow.setStateSimple newState
-    return { model with State = newState }, Cmd.none
+    return { model with State = newState }
 }
 
-let private onPlayerRejected player model = monad {
+let private onPlayerRejected player model : Flow<Model> = monad {
     do! Flow.clearStateSimple
-    return { model with State = AwaitingJoinRejected player }, Cmd.none
+    return { model with State = AwaitingJoinRejected player }
 }
 
-let private onPlayerRemoved player model = monad {
+let private onPlayerRemoved player model : Flow<Model> = monad {
     do! Flow.clearStateSimple
-    return { model with State = AwaitingGameStartRemoved player }, Cmd.none
+    return { model with State = AwaitingGameStartRemoved player }
 }
 
-let private onPlayerRenamed player renameInfo model = monad {
+let private onPlayerRenamed player renameInfo model : Flow<Model> = monad {
     let renamedPlayer = { player with ValidName = renameInfo.NewName }
     do! Flow.setStateSimple <| AwaitingGameStart renamedPlayer
-    return { model with State = AwaitingGameStartRenamed (renamedPlayer, renameInfo) }, Cmd.none
+    return { model with State = AwaitingGameStartRenamed (renamedPlayer, renameInfo) }
 }
 
 let private onPlayerRequestCanceled state playerId model = monad {
@@ -55,26 +53,26 @@ let private onPlayerRequestCanceled state playerId model = monad {
 }
 
 let private onGameSessionNameChangedWhenJoiningSession player newName model =
-    { model with State = JoiningSession { player with GameSessionName = newName } }, Cmd.none
+    { model with State = JoiningSession { player with GameSessionName = newName } } |> pureFlow
 
 let private onGameSessionNameChangedWhenAwaitingJoinConfirmation player newName model =
-    { model with State = AwaitingJoinConfirmation { player with ValidGameSessionName = newName } }, Cmd.none
+    { model with State = AwaitingJoinConfirmation { player with ValidGameSessionName = newName } } |> pureFlow
 
 let private onGameSessionNameChangedWhenAwaitingJoinRejected player newName model =
-    { model with State = AwaitingJoinRejected { player with ValidGameSessionName = newName } }, Cmd.none
+    { model with State = AwaitingJoinRejected { player with ValidGameSessionName = newName } } |> pureFlow
 
 let private onGameSessionNameChangedWhenAwaitingGameStart player newName model =
-    { model with State = AwaitingGameStart { player with ValidGameSessionName = newName } }, Cmd.none
+    { model with State = AwaitingGameStart { player with ValidGameSessionName = newName } } |> pureFlow
 
 let private onGameSessionNameChangedWhenAwaitingGameStartRenamed player renameInfo newName model =
     let player = { player with ValidGameSessionName = newName }
-    { model with State = AwaitingGameStartRenamed (player, renameInfo) }, Cmd.none
+    { model with State = AwaitingGameStartRenamed (player, renameInfo) } |> pureFlow
 
 let private onGameSessionNameChangedWhenAwaitingGameStartRemoved player newName model =
-    { model with State = AwaitingGameStartRemoved { player with ValidGameSessionName = newName } }, Cmd.none
+    { model with State = AwaitingGameStartRemoved { player with ValidGameSessionName = newName } } |> pureFlow
 
 let private onGameSessionNameChangedWhenJoinRequestCanceled newName model =
-    { model with State = JoinRequestCanceled newName }, Cmd.none
+    { model with State = JoinRequestCanceled newName } |> pureFlow
 
 let receiveEvent event model =
     match event, model.State with
@@ -99,25 +97,25 @@ let receiveEvent event model =
         model |> onPlayerRequestCanceled state id
 
     | GameSessionNameChanged newName, JoiningSession player ->
-        model |> onGameSessionNameChangedWhenJoiningSession player newName |> Env.none
+        model |> onGameSessionNameChangedWhenJoiningSession player newName
 
     | GameSessionNameChanged newName, AwaitingJoinConfirmation player ->
-        model |> onGameSessionNameChangedWhenAwaitingJoinConfirmation player newName |> Env.none
+        model |> onGameSessionNameChangedWhenAwaitingJoinConfirmation player newName
 
     | GameSessionNameChanged newName, AwaitingJoinRejected player ->
-        model |> onGameSessionNameChangedWhenAwaitingJoinRejected player newName |> Env.none
+        model |> onGameSessionNameChangedWhenAwaitingJoinRejected player newName
 
     | GameSessionNameChanged newName, AwaitingGameStart player ->
-        model |> onGameSessionNameChangedWhenAwaitingGameStart player newName |> Env.none
+        model |> onGameSessionNameChangedWhenAwaitingGameStart player newName
 
     | GameSessionNameChanged newName, AwaitingGameStartRenamed (player, renameInfo) ->
-        model |> onGameSessionNameChangedWhenAwaitingGameStartRenamed player renameInfo newName |> Env.none
+        model |> onGameSessionNameChangedWhenAwaitingGameStartRenamed player renameInfo newName
 
     | GameSessionNameChanged newName, AwaitingGameStartRemoved player ->
-        model |> onGameSessionNameChangedWhenAwaitingGameStartRemoved player newName |> Env.none
+        model |> onGameSessionNameChangedWhenAwaitingGameStartRemoved player newName
 
     | GameSessionNameChanged newName, JoinRequestCanceled _ ->
-        model |> onGameSessionNameChangedWhenJoinRequestCanceled newName |> Env.none
+        model |> onGameSessionNameChangedWhenJoinRequestCanceled newName
 
     | _ ->
-        model |> Flow.doNothing |> Env.none
+        model |> pureFlow
