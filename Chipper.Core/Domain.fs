@@ -1,6 +1,8 @@
 module Chipper.Core.Domain
 
 open System
+
+open FSharpPlus
 open FSharpx.Collections
 
 type Chip = private Chip of int
@@ -66,6 +68,8 @@ type PlayerJoinRequest = {
     Info : PlayerJoinInfo
 }
 
+type ChipDistribution = EqualChipDitribution of Map<Chip, int>
+
 type GameSessionConfig = {
     ConfigId : GameSessionId
     ConfigName : GameSessionName
@@ -73,6 +77,7 @@ type GameSessionConfig = {
     ConfigDate : DateTime
     ConfigHost : Player
     ConfigPlayers : Player list
+    ConfigChipDistribution : ChipDistribution
 }
 
 type GameSession = private {
@@ -87,17 +92,23 @@ type GameSession = private {
 module Chip =
 
     let create value =
-        if value > 0 && value <= 100_000_000
+        if value > 0 && value <= 1_000_000
         then Chip value |> Ok
         else InvalidChipValue value |> Error
 
     let value (Chip chip) = chip
 
+    let one () = Chip 1
+    let five () = Chip 5
+    let ten () = Chip 10
+    let twentyFive () = Chip 25
+    let oneHundred () = Chip 100
+
 [<RequireQualifiedAccess>]
 module BetAmount =
 
     let create amount =
-        if amount > 0
+        if amount > 0 && amount <= 2_000_000_000
         then BetAmount amount |> Ok
         else InvalidBetAmout amount |> Error
 
@@ -172,18 +183,44 @@ module GameSession =
             ConfigHost = { Id = hostId; Name = hostName; Chips = [] }
             ConfigPlayers = []
             ConfigPlayerRequests = []
+            ConfigChipDistribution =
+                [
+                    Chip.one (), 0
+                    Chip.five (), 0
+                    Chip.ten (), 0
+                    Chip.twentyFive (), 0
+                    Chip.oneHundred (), 0
+                ]
+                |> Map.ofList
+                |> EqualChipDitribution
         }
+
+    let private assignChips (EqualChipDitribution chips) players =
+        if chips |> Map.toList |> List.map snd |> List.exists ((<) 0) then
+            Error InvalidChipDistribution
+        else
+            let chipsPerPlayer =
+                chips
+                |> Map.toList
+                |> List.collect (fun (chip, amount) -> chip |> List.replicate amount)
+
+            players
+            |> NonEmptyList.map (fun player -> { player with Chips = chipsPerPlayer })
+            |> Ok
 
     let fromConfig config =
         let numPlayers = config.ConfigPlayers |> List.length
         if numPlayers > 0 && numPlayers <= 20 then
-            {
-                Id = config.ConfigId
-                Name = config.ConfigName
-                Date = config.ConfigDate
-                Players = NonEmptyList.create config.ConfigHost config.ConfigPlayers
-                Games = []
-            } |> Ok
+            let allPlayers = NonEmptyList.create config.ConfigHost config.ConfigPlayers
+            allPlayers |> assignChips config.ConfigChipDistribution
+            |>> fun players ->
+                {
+                    Id = config.ConfigId
+                    Name = config.ConfigName
+                    Date = config.ConfigDate
+                    Players = players
+                    Games = []
+                }
         else
             InvalidGamePlayersNumber numPlayers |> Error
 

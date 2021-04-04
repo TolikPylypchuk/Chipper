@@ -10,7 +10,9 @@ type GameSessionNameError =
     | EmptyGameSessionName
     | TooLongGameSessionName of string
 
-type GameSessionError = InvalidGamePlayersNumber of int
+type GameSessionError =
+    | InvalidGamePlayersNumber of int
+    | InvalidChipDistribution
 
 type DomainError =
     | ChipError of ChipError
