@@ -2,7 +2,7 @@ module Chipper.Web.GameStartView
 
 open Bolero.Html
 
-open Chipper.Core.Domain
+open Chipper.Core
 
 let homePage dispatch =
     div [ attr.class' "h-100 d-flex align-items-center" ] [
@@ -27,7 +27,7 @@ let homePage dispatch =
         ]
     ]
 
-let startPage isValid isReadonly sessionName playerName dispatch =
+let startPage isReadonly (state : AddSessionState) dispatch =
     div [ attr.class' "h-100 d-flex align-items-center" ] [
         div [ attr.class' "container" ] [
             h2 [ attr.class' "display-4 m-lg-4 m-md-3 m-2 text-center" ] [
@@ -40,7 +40,7 @@ let startPage isValid isReadonly sessionName playerName dispatch =
                     attr.class' "form-control"
                     attr.readonly <| isReadonly
                     attr.placeholder "Your Name"
-                    bind.input.string playerName (Message.inputPlayerName >> dispatch)
+                    bind.input.string state.HostName (Message.inputPlayerName >> dispatch)
                 ]
             ]
 
@@ -51,7 +51,7 @@ let startPage isValid isReadonly sessionName playerName dispatch =
                     attr.readonly <| isReadonly
                     attr.placeholder "Game Name"
                     attr.aria "describedby" "session-name-help"
-                    bind.input.string sessionName (Message.inputSessionName >> dispatch)
+                    bind.input.string state.SessionName (Message.inputSessionName >> dispatch)
                 ]
 
                 div [ attr.id "session-name-help"; attr.class' "form-text" ] [
@@ -60,21 +60,28 @@ let startPage isValid isReadonly sessionName playerName dispatch =
             ]
 
             div [ attr.class' "text-center m-4" ] [
-                button [
-                    attr.type' "button"
-                    attr.class' "btn btn-primary btn-lg"
-                    attr.disabled <| not isValid
-                    on.click (fun _ -> dispatch Message.saveSessionName)
-                ] [
-                    text "Configure the game"
-                ]
+                cond state.Target <| function
+                    | Ok target ->
+                        button [
+                            attr.type' "button"
+                            attr.class' "btn btn-primary btn-lg"
+                            on.click (fun _ -> dispatch <| Message.saveSessionName target)
+                        ] [
+                            text "Configure the game"
+                        ]
+                    | _ ->
+                        button [
+                            attr.type' "button"
+                            attr.class' "btn btn-primary btn-lg"
+                            attr.disabled true
+                        ] [
+                            text "Configure the game"
+                        ]
             ]
         ]
     ]
 
-let joinPage name (GameSessionName sessionName) newPlayer dispatch =
-    let isValid = match newPlayer with Ok _ -> true | _ -> false
-
+let joinPage { Name = name; GameSessionName = GameSessionName sessionName; Target = newPlayer } dispatch =
     div [ attr.class' "h-100 d-flex align-items-center" ] [
         div [ attr.class' "container" ] [
             h2 [ attr.class' "display-4 m-lg-4 m-md-3 m-2 text-center" ] [
@@ -91,17 +98,23 @@ let joinPage name (GameSessionName sessionName) newPlayer dispatch =
             ]
 
             div [ attr.class' "text-center m-4" ] [
-                button [
-                    attr.type' "button"
-                    attr.class' "btn btn-primary btn-lg"
-                    attr.disabled (not isValid)
-                    on.click (fun _ ->
-                        match newPlayer with
-                        | Ok player -> dispatch <| Message.requestAccess player
-                        | _ -> ())
-                ] [
-                    text "Request access"
-                ]
+                cond newPlayer <| function
+                    | Ok player ->
+                        button [
+                            attr.type' "button"
+                            attr.class' "btn btn-primary btn-lg"
+                            on.click (fun _ -> dispatch <| Message.requestAccess player)
+                        ] [
+                            text "Request access"
+                        ]
+                    | _ ->
+                        button [
+                            attr.type' "button"
+                            attr.class' "btn btn-primary btn-lg"
+                            attr.disabled true
+                        ] [
+                            text "Request access"
+                        ]
             ]
         ]
     ]

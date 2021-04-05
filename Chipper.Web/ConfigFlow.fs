@@ -4,9 +4,7 @@ open FSharpPlus
 
 open FsToolkit.ErrorHandling
 
-open Elmish
-
-open Chipper.Core.Domain
+open Chipper.Core
 open Chipper.Web
 
 let private isUnique (players : Player list) playerName =

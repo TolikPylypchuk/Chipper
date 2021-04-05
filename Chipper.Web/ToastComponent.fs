@@ -8,7 +8,7 @@ open Microsoft.JSInterop
 open Bolero
 open Bolero.Html
 
-open Chipper.Core.Domain
+open Chipper.Core
 
 type Toast<'model, 'message> = {
     Header : 'model -> Node

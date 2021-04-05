@@ -6,10 +6,11 @@
 
   <ItemGroup>
     <Compile Include="DomainErrors.fs" />
-    <Compile Include="Domain.fs" />
+    <Compile Include="DomainTypes.fs" />
     <Compile Include="PersistenceErrors.fs" />
+    <Compile Include="PersistenceTypes.fs" />
+    <Compile Include="Domain.fs" />
     <Compile Include="Persistence.fs" />
-    <Compile Include="ErrorWrappers.fs" />
   </ItemGroup>
 
   <ItemGroup>

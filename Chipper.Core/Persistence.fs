@@ -1,33 +1,16 @@
-module Chipper.Core.Persistence
+namespace Chipper.Core
 
-open Domain
-
-type PersistentGameSession =
-    | ConfigurableSession of GameSessionConfig
-    | PersistentSession of GameSession
-
-type GetSession = GameSessionId -> Async<Result<PersistentGameSession, PersistenceError>>
-
-type CreateSession = GameSessionName -> PlayerName -> Async<Result<GameSessionConfig, PersistenceError>>
-
-type UpdateSession = PersistentGameSession -> Async<Result<unit, PersistenceError>>
-
-type DeleteSession = GameSessionId -> Async<Result<unit, PersistenceError>>
-
-type GeneratePlayerId = unit -> Async<PlayerId>
-
-type GameSessionRepository = {
-    GetSession : GetSession
-    CreateSession : CreateSession
-    UpdateSession : UpdateSession
-    DeleteSession : DeleteSession
-    GeneratePlayerId : GeneratePlayerId
-}
+open FSharpPlus
 
 [<RequireQualifiedAccess>]
-module PersistentGameSession =
+module Persistence =
+    
+    let private asPersistenceError result = result |> Result.mapError PersistenceError
 
-    let id =
-        function
-        | ConfigurableSession session -> session.ConfigId
-        | PersistentSession session -> session |> GameSession.id
+    let getSession id repo = repo.GetSession id |> Async.map asPersistenceError
+
+    let createSession name playerName repo = repo.CreateSession name playerName |> Async.map asPersistenceError
+
+    let updateSession session repo = repo.UpdateSession session |> Async.map asPersistenceError
+
+    let deleteSession id repo = repo.DeleteSession id |> Async.map asPersistenceError

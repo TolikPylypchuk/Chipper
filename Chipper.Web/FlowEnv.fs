@@ -5,7 +5,7 @@ open FSharpPlus.Data
 
 open Elmish
 
-open Chipper.Core.Persistence
+open Chipper.Core
 
 type Env = {
     Storage : LocalStorage

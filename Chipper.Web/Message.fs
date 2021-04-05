@@ -1,7 +1,6 @@
 namespace Chipper.Web
 
 open Chipper.Core
-open Chipper.Core.Domain
 
 type GenericMessage =
     | NoMessage
@@ -19,7 +18,7 @@ type GameStartMessage =
     | StartGameSession
     | InputSessionName of string
     | InputPlayerName of string
-    | SaveSessionName
+    | SaveSessionName of GameSessionName * PlayerName
     | SessionSaved of GameSessionConfig
     | RequestAccess of PlayerJoinInfo
     | RequestAccessAgain of PlayerJoinRequest
@@ -59,7 +58,7 @@ module Message =
     let startGameSession = StartGameSession |> GameStartMessage
     let inputSessionName = InputSessionName >> GameStartMessage
     let inputPlayerName = InputPlayerName >> GameStartMessage
-    let saveSessionName = SaveSessionName |> GameStartMessage
+    let saveSessionName = SaveSessionName >> GameStartMessage
     let sessionSaved = SessionSaved >> GameStartMessage
     let requestAccess = RequestAccess >> GameStartMessage
     let requestAccessAgain = RequestAccessAgain >> GameStartMessage

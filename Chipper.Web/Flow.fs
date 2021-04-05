@@ -7,8 +7,6 @@ open FsToolkit.ErrorHandling
 open Elmish
 
 open Chipper.Core
-open Chipper.Core.Domain
-open Chipper.Core.Persistence
 
 let run env flow =
     ReaderT.run flow env
@@ -32,7 +30,7 @@ let asMessage page =
         Message.setError e
 
 let private getConfigSessionState repo config = async {
-    match! repo |> getSession config.ConfigId with
+    match! repo |> Persistence.getSession config.ConfigId with
     | Ok (ConfigurableSession config) ->
         let state = { Config = config; EditMode = NoEdit }
         return ConfiguringSession state |> Some
@@ -41,7 +39,7 @@ let private getConfigSessionState repo config = async {
 }
 
 let private getJoinConfirmationState repo player = async {
-    match! repo |> getSession player.ValidGameSessionId with
+    match! repo |> Persistence.getSession player.ValidGameSessionId with
     | Ok (ConfigurableSession config) ->
         let player =
             { player with
@@ -60,7 +58,7 @@ let private getJoinConfirmationState repo player = async {
 }
 
 let private getGameStartState repo player = async {
-    match! repo |> getSession player.ValidGameSessionId with
+    match! repo |> Persistence.getSession player.ValidGameSessionId with
     | Ok (ConfigurableSession config) ->
         let player =
             { player with
@@ -113,16 +111,18 @@ let getSessionToJoin id : Flow<Async<Message>> = monad {
     let id = GameSessionId id
 
     let result = asyncResult {
-        let! session = repo |> getSession id
+        let! session = repo |> Persistence.getSession id
 
-        let! name = result {
+        let! sessionName =
             match session with
-            | ConfigurableSession session -> return session.ConfigName
-            | PersistentSession _ -> return! Error <| CustomError "The session is already in progress"
-        }
+            | ConfigurableSession session -> Ok session.ConfigName
+            | PersistentSession _ -> Error <| CustomError "The session is already in progress"
 
-        let state = JoiningSession { GameSessionId = id; GameSessionName = name; Name = "" }
-        return Model.simple page state
+        let playerName = ""
+        let target = Model.tryCreateJoiningPlayer id playerName
+        let player = { GameSessionId = id; GameSessionName = sessionName; Name = playerName; Target = target }
+
+        return Model.simple page (JoiningSession player)
     }
 
     result |> Async.map (asMessage page)
@@ -154,8 +154,8 @@ let private loadConfiguringState id state model : Flow<Model> = monad {
 let loadState state model =
     match model.Page, state with
     | StartPage, state ->
-        let newState = AddingSessionName ("", "")
-        { model with State = newState; LocalState = Some state; IsLoaded = true } |> pureFlow
+        let newState = Model.createAddSessionState "" ""
+        { model with State = AddingSessionName newState; LocalState = Some state; IsLoaded = true } |> pureFlow
     | JoinPage _, NoState ->
         { model with LocalState = None; IsLoaded = true } |> pureFlow
     | JoinPage _, (AwaitingJoinConfirmation player | AwaitingGameStart player as state) ->
@@ -200,7 +200,7 @@ let updateSession state model : Flow<Model> = monad {
     let! repo = Env.askRepo
 
     let result = asyncResult {
-        do! repo |> updateSession (ConfigurableSession state.Config)
+        do! repo |> Persistence.updateSession (ConfigurableSession state.Config)
         let localState = ConfiguringSession state
         do! storage.SetState localState
         return Message.setModel { model with Page = ConfigurePage; State = localState }

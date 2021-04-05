@@ -4,7 +4,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Util.fs" />
-    <Compile Include="AppSettings.fs" />
     <Compile Include="Model.fs" />
     <Compile Include="Event.fs" />
     <Compile Include="Message.fs" />

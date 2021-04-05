@@ -1,7 +1,5 @@
 namespace Chipper.Core
 
-open Domain
-
 type GetSessionError =
     | SessionNotFound of GameSessionId
     | GenericGetError of exn

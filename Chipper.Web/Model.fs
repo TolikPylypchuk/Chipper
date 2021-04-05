@@ -1,9 +1,13 @@
 namespace Chipper.Web
 
 open System
+open FSharpPlus
 
 open Chipper.Core
-open Chipper.Core.Domain
+
+type AppSettings = {
+    UrlRoot : string
+}
 
 type Page =
     | HomePage
@@ -12,6 +16,26 @@ type Page =
     | ConfigurePage
     | PlayPage
     | NotImplementedPage
+
+type AddSessionState = {
+    SessionName : string
+    HostName : string
+    Target : Result<GameSessionName * PlayerName, ChipperError>
+}
+
+type JoiningPlayer = {
+    GameSessionId : GameSessionId
+    GameSessionName : GameSessionName
+    Name : string
+    Target : Result<PlayerJoinInfo, ChipperError>
+}
+
+type ValidJoiningPlayer = {
+    ValidGameSessionId : GameSessionId
+    ValidGameSessionName : GameSessionName
+    ValidId : PlayerId
+    ValidName : PlayerName
+}
 
 type ConfigSessionEditMode =
     | NoEdit
@@ -31,7 +55,7 @@ type PlayerRenameInfo = {
 
 type LocalState =
     | NoState
-    | AddingSessionName of string * string
+    | AddingSessionName of AddSessionState
     | JoiningSession of JoiningPlayer
     | JoiningInvalidSession
     | AwaitingJoinConfirmation of ValidJoiningPlayer
@@ -49,22 +73,42 @@ type Model = {
     IsLoaded : bool
 }
 
+[<RequireQualifiedAccess>]
 module Model =
 
     let simple page state = { Page = page; State = state; LocalState = None; IsLoaded = true }
 
+    let createAddSessionState sessionName hostName =
+        let target = tuple2 <!> (sessionName |> Domain.gameSessionName) <*> (hostName |> Domain.playerName)
+        { HostName = hostName; SessionName = sessionName; Target = target }
+
+    let addSessionStateFromConfig config =
+        {
+            SessionName = config.ConfigName |> GameSessionName.value
+            HostName = config.ConfigHost.Name |> PlayerName.value
+            Target = Ok (config.ConfigName, config.ConfigHost.Name)
+        }
+
     let canSaveSessionName name =
-        match name |> gameSessionName with
+        match name |> Domain.gameSessionName with
         | Ok _ -> true
         | _ -> false
-        
+
     let canSavePlayerName name =
-        match name |> playerName with
+        match name |> Domain.playerName with
         | Ok _ -> true
         | _ -> false
+
+    let tryCreateJoiningPlayer id name =
+        name |> Domain.playerName |>> fun name -> { GameSessionId = id; PlayerName = name }
+
+    let createValidJoiningPlayer (joinRequest : PlayerJoinRequest) (player : JoiningPlayer) =
+        {
+            ValidGameSessionId = player.GameSessionId
+            ValidGameSessionName = player.GameSessionName
+            ValidId = joinRequest.PlayerId
+            ValidName = joinRequest.Info.PlayerName
+        }
 
     let createJoinRequest { ValidGameSessionId = sessionId; ValidId = id; ValidName = name } =
         { PlayerId = id; Info = { GameSessionId = sessionId; PlayerName = name } }
-
-    let tryCreateJoinInfo { GameSessionId = id; Name = name } =
-        name |> playerName |> Result.map (fun playerName -> { GameSessionId = id; PlayerName = playerName })

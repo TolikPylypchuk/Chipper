@@ -1,48 +1,36 @@
 module Chipper.Web.GameStartFlow
 
 open FSharpPlus
-open FSharpPlus.Data
-
-open FsToolkit.ErrorHandling
 
 open Elmish
 
 open Chipper.Core
-open Chipper.Core.Domain
 open Chipper.Web
 
 let startSession model =
-    { model with Page = StartPage; State = AddingSessionName ("", "") } |> pureFlow
+    { model with Page = StartPage; State = AddingSessionName <| Model.createAddSessionState "" "" } |> pureFlow
 
 let startSessionWhenConfiguring model =
     { model with Page = StartPage } |> pureFlow
 
-let inputSessionName name playerName model =
-    { model with State = AddingSessionName (name, playerName) } |> pureFlow
+let inputSessionName sessionName hostName model =
+    { model with State = AddingSessionName <| Model.createAddSessionState sessionName hostName } |> pureFlow
 
-let inputPlayerNameWhenAddingSessionName name playerName model =
-    { model with State = AddingSessionName (name, playerName) } |> pureFlow
+let inputPlayerNameWhenAddingSessionName sessionName hostName model =
+    { model with State = AddingSessionName <| Model.createAddSessionState sessionName hostName } |> pureFlow
 
 let inputPlayerNameWhenJoiningSession id sessionName name model =
-    let state = JoiningSession { GameSessionId = id; GameSessionName = sessionName; Name = name }
-    { model with State = state } |> pureFlow
+    let target = Model.tryCreateJoiningPlayer id name
+    let player = { GameSessionId = id; GameSessionName = sessionName; Name = name; Target = target }
+    { model with State = JoiningSession player } |> pureFlow
 
-let saveNewSession name playerName' : Flow<Async<Message>> = monad {
+let saveSessionName sessionName hostName model : Flow<Model> = monad {
     let! repo = Env.askRepo
+    let createSession = Persistence.createSession sessionName hostName
+    let mapToMessage = Result.map Message.sessionSaved >> Message.handleError
 
-    let result = asyncResult {
-        let! name = gameSessionName name
-        let! playerName' = playerName playerName'
-        let! config = repo |> createSession name playerName'
+    do! cmd <| Cmd.OfAsync.perform createSession repo mapToMessage
 
-        return Message.sessionSaved config
-    }
-
-    return result |> Message.handleAsyncError
-}
-
-let saveSessionName name playerName model : Flow<Model> = monad {
-    do! asyncCmd <| saveNewSession name playerName
     return model
 }
 
@@ -69,7 +57,7 @@ let requestAccess player joinInfo model = monad {
     let request : Async<Flow<Model>> = async {
         let! id = repo.GeneratePlayerId ()
         let request = { PlayerId = id; Info = joinInfo }
-        let validPlayer = player |> ValidJoiningPlayer.create request
+        let validPlayer = player |> Model.createValidJoiningPlayer request
         return monad {
             let! newState = doRequestAccess validPlayer request
             do! Flow.setStateSimple newState

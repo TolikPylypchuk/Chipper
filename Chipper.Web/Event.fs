@@ -2,7 +2,7 @@ namespace Chipper.Web
 
 open Elmish
 
-open Chipper.Core.Domain
+open Chipper.Core
 
 type Event =
     | PlayerAccessRequested of PlayerJoinRequest

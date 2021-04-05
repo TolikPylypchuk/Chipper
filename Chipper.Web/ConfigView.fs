@@ -2,7 +2,7 @@ module Chipper.Web.ConfigView
 
 open Bolero.Html
 
-open Chipper.Core.Domain
+open Chipper.Core
 
 let private configurePageHeader js state joinUrl isSessionNameValid dispatch =
     concat [

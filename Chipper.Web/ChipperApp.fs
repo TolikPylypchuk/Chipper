@@ -3,7 +3,6 @@ module Chipper.Web.ChipperApp
 open Microsoft.Extensions.DependencyInjection
 
 open FSharpPlus
-open FSharpPlus.Data
 
 open Elmish
 
@@ -12,8 +11,7 @@ open Flurl
 open Bolero
 open Bolero.Html
 
-open Chipper.Core.Domain
-open Chipper.Core.Persistence
+open Chipper.Core
 
 let init : Flow<Model> = monad {
     let model = { Page = HomePage; State = NoState; LocalState = None; IsLoaded = false }
@@ -59,23 +57,23 @@ let updateGameStart message model =
     | StartGameSession, _ ->
         model |> GameStartFlow.startSession
 
-    | InputSessionName name, AddingSessionName (_, playerName) ->
-        model |> GameStartFlow.inputSessionName name playerName
+    | InputSessionName sessionName, AddingSessionName { HostName = hostName } ->
+        model |> GameStartFlow.inputSessionName sessionName hostName
 
-    | InputPlayerName playerName, AddingSessionName (name, _) ->
-        model |> GameStartFlow.inputPlayerNameWhenAddingSessionName name playerName
+    | InputPlayerName hostName, AddingSessionName { SessionName = sessionName } ->
+        model |> GameStartFlow.inputPlayerNameWhenAddingSessionName sessionName hostName
 
-    | SaveSessionName, AddingSessionName (name, playerName) ->
-        model |> GameStartFlow.saveSessionName name playerName
+    | SaveSessionName (sessionName, hostName), AddingSessionName _ ->
+        model |> GameStartFlow.saveSessionName sessionName hostName
 
-    | SaveSessionName, ConfiguringSession _ ->
+    | SaveSessionName _, ConfiguringSession _ ->
         model |> GameStartFlow.saveSessionNameWhenConfiguring
 
     | SessionSaved config, _ ->
         model |> GameStartFlow.onSessionSaved config
 
-    | InputPlayerName name, JoiningSession { GameSessionId = id; GameSessionName = sessionName } ->
-        model |> GameStartFlow.inputPlayerNameWhenJoiningSession id sessionName name
+    | InputPlayerName playerName, JoiningSession { GameSessionId = id; GameSessionName = sessionName } ->
+        model |> GameStartFlow.inputPlayerNameWhenJoiningSession id sessionName playerName
 
     | RequestAccess joinInfo, JoiningSession player ->
         model |> GameStartFlow.requestAccess player joinInfo
@@ -139,15 +137,14 @@ let mainView js createJoinUrl model dispatch =
     | HomePage, _ ->
         GameStartView.homePage dispatch
 
-    | StartPage, AddingSessionName (sessionName, playerName) ->
-        let isValid = Model.canSaveSessionName sessionName && Model.canSavePlayerName playerName
-        GameStartView.startPage isValid false sessionName playerName dispatch
+    | StartPage, AddingSessionName state ->
+        GameStartView.startPage false state dispatch
         
     | JoinPage _, NoState ->
         empty
 
     | JoinPage _, JoiningSession player ->
-        GameStartView.joinPage player.Name player.GameSessionName (player |> Model.tryCreateJoinInfo) dispatch
+        GameStartView.joinPage player dispatch
 
     | JoinPage _, AwaitingJoinConfirmation player ->
         GameStartView.awaitJoinPage player.ValidGameSessionName dispatch
@@ -170,10 +167,8 @@ let mainView js createJoinUrl model dispatch =
     | JoinPage _, JoiningInvalidSession ->
         GameStartView.invalidJoinPage
 
-    | StartPage,
-      ConfiguringSession { Config = { ConfigName = GameSessionName sessionName
-                                      ConfigHost = { Name = PlayerName hostName } } } ->
-        GameStartView.startPage true true sessionName hostName dispatch
+    | StartPage, ConfiguringSession { Config = config } ->
+        GameStartView.startPage true (config |> Model.addSessionStateFromConfig) dispatch
 
     | ConfigurePage, ConfiguringSession state ->
         let joinUrl = createJoinUrl state.Config.ConfigId
