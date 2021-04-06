@@ -20,6 +20,35 @@ let private apendNumberIfNotUnique players playerName =
         |> Seq.filter isUnique
         |> Seq.head
 
+let doAcceptPlayerRequest playerId state name model = monad {
+    let actualName = name |> apendNumberIfNotUnique (state.Config.ConfigHost :: state.Config.ConfigPlayers)
+    let newPlayer = { Id = playerId; Name = actualName; Chips = [] }
+    let playerRequests =
+        state.Config.ConfigPlayerRequests
+        |> List.filter (fun request -> request.PlayerId <> playerId)
+
+    let newState =
+        {
+            state with
+                Config = {
+                    state.Config with
+                        ConfigPlayers = state.Config.ConfigPlayers @ [ newPlayer ]
+                        ConfigPlayerRequests = playerRequests
+                }
+        }
+
+    do! PlayerAccepted playerId |> postEvent newState.Config.ConfigId
+
+    let! result = model |> Flow.updateSession newState
+
+    if actualName <> name then
+        let renameInfo = { PlayerId = playerId; NewName = actualName; HostName = PlayerName.theGame }
+        do! PlayerRenamed renameInfo |> postEvent newState.Config.ConfigId
+        return result
+    else
+        return result
+}
+
 let acceptPlayerRequest playerId state model = monad {
     let name =
         state.Config.ConfigPlayerRequests
@@ -29,32 +58,7 @@ let acceptPlayerRequest playerId state model = monad {
 
     match name with
     | Some name ->
-        let actualName = name |> apendNumberIfNotUnique (state.Config.ConfigHost :: state.Config.ConfigPlayers)
-        let newPlayer = { Id = playerId; Name = actualName; Chips = [] }
-        let playerRequests =
-            state.Config.ConfigPlayerRequests
-            |> List.filter (fun request -> request.PlayerId <> playerId)
-
-        let newState =
-            {
-                state with
-                    Config = {
-                        state.Config with
-                            ConfigPlayers = state.Config.ConfigPlayers @ [ newPlayer ]
-                            ConfigPlayerRequests = playerRequests
-                    }
-            }
-
-        do! PlayerAccepted playerId |> postEvent newState.Config.ConfigId
-
-        let! result = model |> Flow.updateSession newState
-
-        if actualName <> name then
-            let renameInfo = { PlayerId = playerId; NewName = actualName; HostName = PlayerName.theGame }
-            do! PlayerRenamed renameInfo |> postEvent newState.Config.ConfigId
-            return result
-        else
-            return result
+        return! model |> doAcceptPlayerRequest playerId state name
     | None ->
         return model
 }
@@ -68,12 +72,17 @@ let rejectPlayerRequest playerId state model = monad {
     return { model with State = ConfiguringSession newState }
 }
 
+let private createEditedSession name =
+    { Name = name; Target = name |> Domain.gameSessionName }
+
 let editSessionName state model =
     let (GameSessionName name) = state.Config.ConfigName
-    { model with State = ConfiguringSession { state with EditMode = EditSession name } } |> pureFlow
+    { model with State = ConfiguringSession { state with EditMode = EditSession <| createEditedSession name } }
+    |> pureFlow
 
-let inputSessionName sessionName state model =
-    { model with State = ConfiguringSession { state with EditMode = EditSession sessionName } } |> pureFlow
+let inputSessionName name state model =
+    { model with State = ConfiguringSession { state with EditMode = EditSession <| createEditedSession name } }
+    |> pureFlow
 
 let private doAcceptSessionNameEdit newName state : Flow<ConfigSessionState> = monad {
     let newState = { state with Config = { state.Config with ConfigName = newName }; EditMode = NoEdit }
@@ -82,14 +91,13 @@ let private doAcceptSessionNameEdit newName state : Flow<ConfigSessionState> = m
     return newState
 }
 
-let acceptSessionNameEdit sessionName state model = monad {
-    let! newState =
-        match sessionName |> GameSessionName.create with
-        | Ok newName -> doAcceptSessionNameEdit newName state
-        | _ -> state |> pureFlow
-
+let acceptSessionNameEdit newName state model = monad {
+    let! newState = doAcceptSessionNameEdit newName state
     return! model |> Flow.updateSession newState
 }
+
+let private isPlayerNameValid players playerId name =
+    players |> List.forall (fun (player : Player) -> player.Id = playerId || player.Name <> name)
 
 let editPlayerName playerId state model =
     let name =
@@ -100,14 +108,25 @@ let editPlayerName playerId state model =
 
     match name with
     | Some name ->
-        let newState = { state with EditMode = EditPlayer (playerId, name |> PlayerName.value) }
+        let editedPlayer = { Id = playerId; Name = name |> PlayerName.value; Target = Ok name }
+        let newState = { state with EditMode = EditPlayer editedPlayer }
         { model with State = ConfiguringSession newState }
     | None ->
         model
     |> pureFlow
 
-let inputPlayerName playerName editedName state model =
-    { model with State = ConfiguringSession { state with EditMode = EditPlayer (playerName, editedName) } } |> pureFlow
+let private duplicatePlayerName (PlayerName name) =
+    name |> DuplicatePlayerName |> PlayerNameError |> DomainError |> Error
+
+let inputPlayerName playerId editedName state model =
+    let allPlayers = state.Config.ConfigHost :: state.Config.ConfigPlayers
+    let target =
+        editedName
+        |> Domain.playerName
+        >>= fun name -> if name |> isPlayerNameValid allPlayers playerId then Ok name else duplicatePlayerName name
+
+    let editedPlayer = { Id = playerId; Name = editedName; Target = target }
+    { model with State = ConfiguringSession { state with EditMode = EditPlayer editedPlayer } } |> pureFlow
 
 let private doAcceptPlayerNameEdit playerId newName state : Flow<ConfigSessionState> = monad {
     let newPlayers =
@@ -132,24 +151,13 @@ let private doAcceptPlayerNameEdit playerId newName state : Flow<ConfigSessionSt
     return newState
 }
 
-let acceptPlayerNameEdit playerName editedName state model = monad {
-    let! newState =
-        match editedName |> PlayerName.create with
-        | Ok newName -> doAcceptPlayerNameEdit playerName newName state
-        | _ -> state |> pureFlow
-
+let acceptPlayerNameEdit playerName newName state model = monad {
+    let! newState = doAcceptPlayerNameEdit playerName newName state
     return! model |> Flow.updateSession newState
 }
 
 let cancelEdit state model =
     { model with State = ConfiguringSession { state with EditMode = NoEdit } } |> pureFlow
-
-let isEditedPlayerNameValid players playerId editedName =
-    match editedName |> PlayerName.create with
-    | Ok name -> players |> List.forall (fun (player : Player) -> player.Id = playerId || player.Name <> name)
-    | _ -> false
-
-let isEditedSessionNameValid = GameSessionName.create >> function Ok _ -> true | _ -> false
 
 let removePlayer playerId state model = monad {
     let players = state.Config.ConfigPlayers |> List.filter (fun player -> player.Id <> playerId)

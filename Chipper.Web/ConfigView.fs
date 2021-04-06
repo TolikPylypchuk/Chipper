@@ -4,14 +4,14 @@ open Bolero.Html
 
 open Chipper.Core
 
-let private configurePageHeader js state joinUrl isSessionNameValid dispatch =
+let private configurePageHeader js state joinUrl dispatch =
     concat [
         h1 [ attr.class' "display-1 p-lg-4 p-md-3 p-2 text-center" ] [
             text $"Configure {state.Config.ConfigName |> GameSession.name}"
         ]
 
         cond state.EditMode <| function
-            | EditSession name ->
+            | EditSession { Name = name; Target = target } ->
                 div [ attr.class' "d-flex flex-row align-items-center justify-content-center" ] [
                     input [
                         attr.name "session-name"
@@ -19,14 +19,23 @@ let private configurePageHeader js state joinUrl isSessionNameValid dispatch =
                     ]
 
                     div [] [
-                        button [
-                            attr.type' "button"
-                            attr.class' "btn btn-success btn-sm m-1"
-                            attr.disabled (not <| isSessionNameValid name)
-                            on.click (fun _ -> dispatch Message.acceptEdit)
-                        ] [
-                            i [ attr.class' "bi bi-check2-circle" ] []
-                        ]
+                        cond target <| function
+                            | Ok newName ->
+                                button [
+                                    attr.type' "button"
+                                    attr.class' "btn btn-success btn-sm m-1"
+                                    on.click (fun _ -> dispatch <| Message.acceptSessionNameEdit newName)
+                                ] [
+                                    i [ attr.class' "bi bi-check2-circle" ] []
+                                ]
+                            | _ ->
+                                button [
+                                    attr.type' "button"
+                                    attr.class' "btn btn-success btn-sm m-1"
+                                    attr.disabled true
+                                ] [
+                                    i [ attr.class' "bi bi-check2-circle" ] []
+                                ]
 
                         button [
                             attr.type' "button"
@@ -97,7 +106,7 @@ let private configurePagePlayer state (player : Player) name dispatch =
         ]
     ]
 
-let private configurePageEditedPlayer playerId editedName isPlayerNameValid dispatch =
+let private configurePageEditedPlayer editedName target dispatch =
     concat [
         input [
             attr.name "player-name"
@@ -105,14 +114,23 @@ let private configurePageEditedPlayer playerId editedName isPlayerNameValid disp
         ]
 
         div [] [
-            button [
-                attr.type' "button"
-                attr.class' "btn btn-success btn-sm m-1"
-                attr.disabled (not <| isPlayerNameValid playerId editedName)
-                on.click (fun _ -> dispatch Message.acceptEdit)
-            ] [
-                i [ attr.class' "bi bi-check2-circle" ] []
-            ]
+            cond target <| function
+                | Ok newName ->
+                    button [
+                        attr.type' "button"
+                        attr.class' "btn btn-success btn-sm m-1"
+                        on.click (fun _ -> dispatch <| Message.acceptPlayerNameEdit newName)
+                    ] [
+                        i [ attr.class' "bi bi-check2-circle" ] []
+                    ]
+                | _ ->
+                    button [
+                        attr.type' "button"
+                        attr.class' "btn btn-success btn-sm m-1"
+                        attr.disabled true
+                    ] [
+                        i [ attr.class' "bi bi-check2-circle" ] []
+                    ]
 
             button [
                 attr.type' "button"
@@ -124,7 +142,7 @@ let private configurePageEditedPlayer playerId editedName isPlayerNameValid disp
         ]
     ]
 
-let private configurePagePlayers state isPlayerNameValid dispatch =
+let private configurePagePlayers state dispatch =
     section [ attr.class' "col-md-auto m-2 m-md-4" ] [
         h6 [] [
             text "Players"
@@ -136,8 +154,8 @@ let private configurePagePlayers state isPlayerNameValid dispatch =
 
                 li [ attr.class' "list-group-item d-flex flex-row align-items-center justify-content-between" ] [
                     cond state.EditMode <| function
-                        | EditPlayer (playerId, editedName) when playerId = player.Id ->
-                            configurePageEditedPlayer playerId editedName isPlayerNameValid dispatch
+                        | EditPlayer { Id = playerId; Name = editedName; Target = target } when playerId = player.Id ->
+                            configurePageEditedPlayer editedName target dispatch
                         | _ ->
                             configurePagePlayer state player name dispatch
                 ]
@@ -179,12 +197,12 @@ let private configurePagePlayerRequests state dispatch =
         ]
     ]
 
-let configurePage js state joinUrl isSessionNameValid isPlayerNameValid dispatch =
+let configurePage js state joinUrl dispatch =
     div [ attr.class' "container" ] [
-        configurePageHeader js state joinUrl isSessionNameValid dispatch
+        configurePageHeader js state joinUrl dispatch
         
         div [ attr.class' "row justify-content-md-center" ] [
-            configurePagePlayers state isPlayerNameValid dispatch
+            configurePagePlayers state dispatch
             configurePagePlayerRequests state dispatch
         ]
 

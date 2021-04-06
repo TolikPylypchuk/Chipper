@@ -30,7 +30,8 @@ type ConfigMessage =
     | ConfigInputSessionName of string
     | EditPlayerName of PlayerId
     | ConfigInputPlayerName of string
-    | AcceptEdit
+    | AcceptSessionNameEdit of GameSessionName
+    | AcceptPlayerNameEdit of PlayerName
     | CancelEdit
     | AcceptPlayerRequest of PlayerId
     | RejectPlayerRequest of PlayerId
@@ -69,7 +70,8 @@ module Message =
     let configInputSessionName = ConfigInputSessionName >> ConfigMessage
     let editPlayerName = EditPlayerName >> ConfigMessage
     let configInputPlayerName = ConfigInputPlayerName >> ConfigMessage
-    let acceptEdit = AcceptEdit |> ConfigMessage
+    let acceptSessionNameEdit = AcceptSessionNameEdit >> ConfigMessage
+    let acceptPlayerNameEdit = AcceptPlayerNameEdit >> ConfigMessage
     let cancelEdit = CancelEdit |> ConfigMessage
     let acceptPlayerRequest = AcceptPlayerRequest >> ConfigMessage
     let rejectPlayerRequest = RejectPlayerRequest >> ConfigMessage

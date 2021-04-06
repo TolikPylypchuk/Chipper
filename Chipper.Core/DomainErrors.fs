@@ -4,7 +4,9 @@ type ChipError = InvalidChipValue of int
 
 type BetAmountError = InvalidBetAmout of int
 
-type PlayerNameError = InvalidPlayerName of string
+type PlayerNameError =
+    | InvalidPlayerName of string
+    | DuplicatePlayerName of string
 
 type GameSessionNameError =
     | EmptyGameSessionName

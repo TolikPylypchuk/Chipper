@@ -37,10 +37,21 @@ type ValidJoiningPlayer = {
     ValidName : PlayerName
 }
 
+type EditedPlayerName = {
+    Id : PlayerId
+    Name : string
+    Target : Result<PlayerName, ChipperError>
+}
+
+type EditedSessionName = {
+    Name : string
+    Target : Result<GameSessionName, ChipperError>
+}
+
 type ConfigSessionEditMode =
     | NoEdit
-    | EditPlayer of PlayerId * string
-    | EditSession of string
+    | EditSession of EditedSessionName
+    | EditPlayer of EditedPlayerName
 
 type ConfigSessionState = {
     Config : GameSessionConfig
@@ -88,16 +99,6 @@ module Model =
             HostName = config.ConfigHost.Name |> PlayerName.value
             Target = Ok (config.ConfigName, config.ConfigHost.Name)
         }
-
-    let canSaveSessionName name =
-        match name |> Domain.gameSessionName with
-        | Ok _ -> true
-        | _ -> false
-
-    let canSavePlayerName name =
-        match name |> Domain.playerName with
-        | Ok _ -> true
-        | _ -> false
 
     let tryCreateJoiningPlayer id name =
         name |> Domain.playerName |>> fun name -> { GameSessionId = id; PlayerName = name }

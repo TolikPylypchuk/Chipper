@@ -108,14 +108,14 @@ let updateConfig message model =
     | EditPlayerName playerId, ConfiguringSession state ->
         model |> ConfigFlow.editPlayerName playerId state
 
-    | ConfigInputPlayerName editedName, ConfiguringSession ({ EditMode = EditPlayer (playerId, _) } as state) ->
+    | ConfigInputPlayerName editedName, ConfiguringSession ({ EditMode = EditPlayer { Id = playerId } } as state) ->
         model |> ConfigFlow.inputPlayerName playerId editedName state
         
-    | AcceptEdit, ConfiguringSession ({ EditMode = EditSession sessionName } as state) ->
-        model |> ConfigFlow.acceptSessionNameEdit sessionName state
+    | AcceptSessionNameEdit newName, ConfiguringSession ({ EditMode = EditSession _ } as state) ->
+        model |> ConfigFlow.acceptSessionNameEdit newName state
 
-    | AcceptEdit, ConfiguringSession ({ EditMode = EditPlayer (playerId, editedName) } as state) ->
-        model |> ConfigFlow.acceptPlayerNameEdit playerId editedName state
+    | AcceptPlayerNameEdit newName, ConfiguringSession ({ EditMode = EditPlayer { Id = playerId } } as state) ->
+        model |> ConfigFlow.acceptPlayerNameEdit playerId newName state
 
     | CancelEdit, ConfiguringSession state ->
         model |> ConfigFlow.cancelEdit state
@@ -156,10 +156,12 @@ let mainView js createJoinUrl model dispatch =
         GameStartView.lobbyPage player.ValidGameSessionName (Some renameInfo) dispatch
 
     | JoinPage _, AwaitingJoinRejected player ->
-        GameStartView.rejectedJoinPage player.ValidGameSessionName (player |> Model.createJoinRequest) false dispatch
+        let request = player |> Model.createJoinRequest
+        GameStartView.rejectedJoinPage player.ValidGameSessionName request false dispatch
 
     | JoinPage _, AwaitingGameStartRemoved player ->
-        GameStartView.rejectedJoinPage player.ValidGameSessionName (player |> Model.createJoinRequest) true dispatch
+        let request = player |> Model.createJoinRequest
+        GameStartView.rejectedJoinPage player.ValidGameSessionName request true dispatch
         
     | JoinPage _, JoinRequestCanceled sessionName ->
         GameStartView.joinRequestCanceledPage sessionName
@@ -168,12 +170,12 @@ let mainView js createJoinUrl model dispatch =
         GameStartView.invalidJoinPage
 
     | StartPage, ConfiguringSession { Config = config } ->
-        GameStartView.startPage true (config |> Model.addSessionStateFromConfig) dispatch
+        let state = config |> Model.addSessionStateFromConfig
+        GameStartView.startPage true state dispatch
 
     | ConfigurePage, ConfiguringSession state ->
         let joinUrl = createJoinUrl state.Config.ConfigId
-        let isNameValid = ConfigFlow.isEditedPlayerNameValid (state.Config.ConfigHost :: state.Config.ConfigPlayers)
-        ConfigView.configurePage js state joinUrl ConfigFlow.isEditedSessionNameValid isNameValid dispatch
+        ConfigView.configurePage js state joinUrl dispatch
 
     | _ ->
         View.notImplementedPage
