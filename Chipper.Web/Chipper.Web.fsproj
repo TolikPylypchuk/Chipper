@@ -31,7 +31,7 @@
     <PackageReference Include="FSharp.SystemTextJson" Version="0.16.6" />
     <PackageReference Include="FsToolkit.ErrorHandling" Version="2.1.2" />
     <PackageReference Include="LibSassBuilder" Version="1.6.2" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" Version="5.0.4" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" Version="5.0.5" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="5.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="5.0.1" />
     <PackageReference Include="Microsoft.Web.LibraryManager.Build" Version="2.1.113" />
