@@ -38,7 +38,7 @@ let private onPlayerRenamed player renameInfo model : Flow<Model> = monad {
 let private onPlayerRequestCanceled state playerId model = monad {
     let newPlayers =
         state.Config.ConfigPlayers
-        |> List.filter (fun player -> player.Id <> playerId)
+        |> PlayerList.removePlayer playerId
 
     let newPlayerRequests =
         state.Config.ConfigPlayerRequests

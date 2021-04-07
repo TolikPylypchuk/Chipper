@@ -48,7 +48,9 @@ let private getJoinConfirmationState repo player = async {
             }
 
         let localState =
-            if config.ConfigPlayers |> List.exists (fun player' -> player'.Name = player.ValidName)
+            if config.ConfigPlayers
+                |> PlayerList.configPlayers
+                |> List.exists (fun player' -> player'.Id = player.ValidId)
             then AwaitingGameStart player
             else AwaitingJoinConfirmation player
 

@@ -57,21 +57,27 @@ type PlayerJoinRequest = {
 
 type ChipDistribution = EqualChipDitribution of Map<Chip, int>
 
+type ConfigPlayerList = private {
+    Host : Player
+    Players : List<Player>
+}
+
 type GameSessionConfig = {
     ConfigId : GameSessionId
     ConfigName : GameSessionName
     ConfigPlayerRequests : PlayerJoinRequest list
     ConfigDate : DateTime
-    ConfigHost : Player
-    ConfigPlayers : Player list
+    ConfigPlayers : ConfigPlayerList
     ConfigChipDistribution : ChipDistribution
 }
+
+type PlayerList = private PlayerList of NonEmptyList<Player>
 
 type GameSession = private {
     Id : GameSessionId
     Name : GameSessionName
     Date : DateTime
-    Players : NonEmptyList<Player>
+    Players : PlayerList
     Games : Game list
 }
 
@@ -114,7 +120,7 @@ module PlayerName =
     let value (PlayerName name) = name
 
     let theGame = PlayerName <| nameof Chipper
-
+    
     let appendNumber num (PlayerName playerName) =
         let playerNameAndNumber = $"{playerName} {num}"
 
@@ -132,6 +138,63 @@ module Player =
     let addChips chips player = { player with Chips = player.Chips @ chips |> List.sort }
 
     let removeChips chips player = { player with Chips = player.Chips |> List.except chips }
+
+[<AutoOpen>]
+module PlayerList =
+
+    let initConfig host = { Host = host; Players = [] }
+
+    let configHost players = players.Host
+
+    let configPlayers (players : ConfigPlayerList) = players.Players
+
+    let configValue players = NonEmptyList.create players.Host players.Players
+    
+    let value (PlayerList players) = players
+
+    let fromConfig players = PlayerList <| NonEmptyList.create players.Host players.Players
+    
+    let private isUnique (players : NonEmptyList<Player>) playerName =
+        players |> NonEmptyList.map (fun player -> player.Name <> playerName) |> NonEmptyList.reduce (&&)
+    
+    let private apendNumberIfNotUnique players playerName =
+        let isUnique = isUnique players
+        if playerName |> isUnique then
+            playerName
+        else
+            2
+            |> Seq.unfold (fun num -> Some (playerName |> PlayerName.appendNumber num, num + 1))
+            |> Seq.filter isUnique
+            |> Seq.head
+
+    let addPlayer playerId playerName players =
+        let actualName = playerName |> apendNumberIfNotUnique (players |> configValue)
+        let newPlayer = { Id = playerId; Name = actualName; Chips = [] }
+        { players with Players = players.Players @ [ newPlayer ] }, actualName
+
+    let removePlayer playerId (players : ConfigPlayerList) =
+        { players with Players = players.Players |> List.filter (fun player -> player.Id <> playerId) }
+        
+    let private isPlayerNameValid players playerId name =
+        players
+        |> configValue
+        |> NonEmptyList.map (fun player -> player.Id = playerId || player.Name <> name)
+        |> NonEmptyList.reduce (&&)
+
+    let updatePlayer (playerId : PlayerId) (editedName : PlayerName) (player : Player) =
+        if player.Id = playerId
+        then { player with Name = editedName }
+        else player
+        
+    let editPlayerName playerId (players : ConfigPlayerList) editedName =
+        if editedName |> isPlayerNameValid players playerId then
+            if playerId = players.Host.Id then
+                { players with Host = { players.Host with Name = editedName } }
+            else
+                { players with Players = players.Players |> List.map (updatePlayer playerId editedName) }
+            |> Ok
+        else
+            editedName |> PlayerName.value |> DuplicatePlayerName |> Error
 
 [<RequireQualifiedAccess>]
 module GameSessionName =
@@ -156,8 +219,7 @@ module GameSession =
             ConfigId = id
             ConfigName = name
             ConfigDate = date
-            ConfigHost = { Id = hostId; Name = hostName; Chips = [] }
-            ConfigPlayers = []
+            ConfigPlayers = PlayerList.initConfig { Id = hostId; Name = hostName; Chips = [] }
             ConfigPlayerRequests = []
             ConfigChipDistribution =
                 [
@@ -171,7 +233,7 @@ module GameSession =
                 |> EqualChipDitribution
         }
 
-    let private assignChips (EqualChipDitribution chips) players =
+    let private assignChips (EqualChipDitribution chips) (PlayerList players) =
         if chips |> Map.toList |> List.map snd |> List.exists ((<) 0) then
             Error InvalidChipDistribution
         else
@@ -182,13 +244,15 @@ module GameSession =
 
             players
             |> NonEmptyList.map (fun player -> { player with Chips = chipsPerPlayer })
+            |> PlayerList
             |> Ok
 
     let fromConfig config =
-        let numPlayers = config.ConfigPlayers |> List.length
+        let numPlayers = config.ConfigPlayers.Players |> List.length
         if numPlayers > 0 && numPlayers <= 20 then
-            let allPlayers = NonEmptyList.create config.ConfigHost config.ConfigPlayers
-            allPlayers |> assignChips config.ConfigChipDistribution
+            let allPlayers = PlayerList.fromConfig config.ConfigPlayers
+            allPlayers
+            |> assignChips config.ConfigChipDistribution
             |>> fun players ->
                 {
                     Id = config.ConfigId

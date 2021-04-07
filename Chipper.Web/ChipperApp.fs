@@ -114,8 +114,8 @@ let updateConfig message model =
     | AcceptSessionNameEdit newName, ConfiguringSession ({ EditMode = EditSession _ } as state) ->
         model |> ConfigFlow.acceptSessionNameEdit newName state
 
-    | AcceptPlayerNameEdit newName, ConfiguringSession ({ EditMode = EditPlayer { Id = playerId } } as state) ->
-        model |> ConfigFlow.acceptPlayerNameEdit playerId newName state
+    | AcceptPlayerNameEdit newPlayers, ConfiguringSession ({ EditMode = EditPlayer { Id = playerId } } as state) ->
+        model |> ConfigFlow.acceptPlayerNameEdit playerId newPlayers state
 
     | CancelEdit, ConfiguringSession state ->
         model |> ConfigFlow.cancelEdit state

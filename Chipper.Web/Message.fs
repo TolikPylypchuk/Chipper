@@ -31,7 +31,7 @@ type ConfigMessage =
     | EditPlayerName of PlayerId
     | ConfigInputPlayerName of string
     | AcceptSessionNameEdit of GameSessionName
-    | AcceptPlayerNameEdit of PlayerName
+    | AcceptPlayerNameEdit of ConfigPlayerList
     | CancelEdit
     | AcceptPlayerRequest of PlayerId
     | RejectPlayerRequest of PlayerId

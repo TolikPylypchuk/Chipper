@@ -40,7 +40,7 @@ type ValidJoiningPlayer = {
 type EditedPlayerName = {
     Id : PlayerId
     Name : string
-    Target : Result<PlayerName, ChipperError>
+    Target : Result<ConfigPlayerList, ChipperError>
 }
 
 type EditedSessionName = {
@@ -96,8 +96,8 @@ module Model =
     let addSessionStateFromConfig config =
         {
             SessionName = config.ConfigName |> GameSessionName.value
-            HostName = config.ConfigHost.Name |> PlayerName.value
-            Target = Ok (config.ConfigName, config.ConfigHost.Name)
+            HostName = (config.ConfigPlayers |> PlayerList.configHost).Name |> PlayerName.value
+            Target = Ok (config.ConfigName, (config.ConfigPlayers |> PlayerList.configHost).Name)
         }
 
     let tryCreateJoiningPlayer id name =

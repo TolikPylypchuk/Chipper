@@ -98,7 +98,7 @@ let private configurePagePlayer state (player : Player) name dispatch =
             button [
                 attr.type' "button"
                 attr.class' "btn btn-danger btn-sm m-1"
-                attr.disabled (player.Name = state.Config.ConfigHost.Name)
+                attr.disabled (player.Id = (state.Config.ConfigPlayers |> PlayerList.configHost).Id)
                 on.click (fun _ -> dispatch <| Message.removePlayer player.Id)
             ] [
                 i [ attr.class' "bi bi-x-circle" ] []
@@ -115,11 +115,11 @@ let private configurePageEditedPlayer editedName target dispatch =
 
         div [] [
             cond target <| function
-                | Ok newName ->
+                | Ok newPlayers ->
                     button [
                         attr.type' "button"
                         attr.class' "btn btn-success btn-sm m-1"
-                        on.click (fun _ -> dispatch <| Message.acceptPlayerNameEdit newName)
+                        on.click (fun _ -> dispatch <| Message.acceptPlayerNameEdit newPlayers)
                     ] [
                         i [ attr.class' "bi bi-check2-circle" ] []
                     ]
@@ -149,7 +149,7 @@ let private configurePagePlayers state dispatch =
         ]
 
         ul [ attr.class' "list-group w-100" ] [
-            forEach (state.Config.ConfigHost :: state.Config.ConfigPlayers) <| fun player ->
+            forEach (state.Config.ConfigPlayers |> PlayerList.configValue) <| fun player ->
                 let (PlayerName name) = player.Name
 
                 li [ attr.class' "list-group-item d-flex flex-row align-items-center justify-content-between" ] [

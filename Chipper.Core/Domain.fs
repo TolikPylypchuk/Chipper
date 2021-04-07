@@ -18,6 +18,9 @@ module Domain =
 
     let playerName = PlayerName.create >> Result.mapError PlayerNameError >> asDomainError
 
+    let editPlayerName playerId players =
+        PlayerList.editPlayerName playerId players >> Result.mapError PlayerListError >> asDomainError
+
     let gameSessionName = GameSessionName.create >> Result.mapError GameSessionNameError >> asDomainError
 
     let gameSession = GameSession.fromConfig >> Result.mapError GameSessionError >> asDomainError
