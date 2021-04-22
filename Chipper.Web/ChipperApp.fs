@@ -120,8 +120,14 @@ let updateConfig message model =
     | CancelEdit, ConfiguringSession state ->
         model |> ConfigFlow.cancelEdit state
 
-    | RemovePlayer playerName, ConfiguringSession state ->
-        model |> ConfigFlow.removePlayer playerName state
+    | RemovePlayer playerId, ConfiguringSession state ->
+        model |> ConfigFlow.removePlayer playerId state
+
+    | MovePlayerUp playerId, ConfiguringSession state ->
+        model |> ConfigFlow.movePlayer PlayerList.movePlayerUp playerId state
+
+    | MovePlayerDown playerId, ConfiguringSession state ->
+        model |> ConfigFlow.movePlayer PlayerList.movePlayerDown playerId state
 
     | _ ->
         model |> pureFlow
@@ -175,7 +181,7 @@ let mainView js createJoinUrl model dispatch =
 
     | ConfigurePage, ConfiguringSession state ->
         let joinUrl = createJoinUrl state.Config.ConfigId
-        ConfigView.configurePage js state joinUrl dispatch
+        ConfigView.configPage js state joinUrl dispatch
 
     | _ ->
         View.notImplementedPage

@@ -4,7 +4,7 @@ open Bolero.Html
 
 open Chipper.Core
 
-let private configurePageHeader js state joinUrl dispatch =
+let private header js state joinUrl dispatch =
     concat [
         h1 [ attr.class' "display-1 p-lg-4 p-md-3 p-2 text-center" ] [
             text $"Configure {state.Config.ConfigName |> GameSession.name}"
@@ -79,8 +79,20 @@ let private configurePageHeader js state joinUrl dispatch =
         ]
     ]
 
-let private configurePagePlayer state (player : Player) name dispatch =
-    concat [
+let private canMove tryGetPlayer state player =
+    (player <> (state.Config.ConfigPlayers |> PlayerList.configHost)) &&
+    state.Config.ConfigPlayers
+    |> PlayerList.configPlayers
+    |> tryGetPlayer
+    |> Option.map ((<>) player)
+    |> Option.defaultValue false
+
+let private canMoveUp = canMove List.tryHead
+
+let private canMoveDown = canMove List.tryLast
+
+let private playerItem state (player : Player) name dispatch =
+    div [ attr.class' "d-flex flex-row align-items-center justify-content-between" ] [
         span [ attr.class' "me-3" ] [
             text name
         ]
@@ -97,6 +109,24 @@ let private configurePagePlayer state (player : Player) name dispatch =
 
             button [
                 attr.type' "button"
+                attr.class' "btn btn-secondary btn-sm m-1"
+                attr.disabled (player |> canMoveUp state |> not)
+                on.click (fun _ -> dispatch <| Message.movePlayerUp player.Id)
+            ] [
+                i [ attr.class' "bi bi-arrow-up" ] []
+            ]
+
+            button [
+                attr.type' "button"
+                attr.class' "btn btn-secondary btn-sm m-1"
+                attr.disabled (player |> canMoveDown state |> not)
+                on.click (fun _ -> dispatch <| Message.movePlayerDown player.Id)
+            ] [
+                i [ attr.class' "bi bi-arrow-down" ] []
+            ]
+
+            button [
+                attr.type' "button"
                 attr.class' "btn btn-danger btn-sm m-1"
                 attr.disabled (player.Id = (state.Config.ConfigPlayers |> PlayerList.configHost).Id)
                 on.click (fun _ -> dispatch <| Message.removePlayer player.Id)
@@ -106,8 +136,8 @@ let private configurePagePlayer state (player : Player) name dispatch =
         ]
     ]
 
-let private configurePageEditedPlayer editedName target dispatch =
-    concat [
+let private editedPlayerItem editedName target dispatch =
+    div [ attr.class' "d-flex flex-row align-items-center justify-content-between" ] [
         input [
             attr.name "player-name"
             bind.input.string editedName (dispatch << Message.configInputPlayerName)
@@ -142,7 +172,7 @@ let private configurePageEditedPlayer editedName target dispatch =
         ]
     ]
 
-let private configurePagePlayers state dispatch =
+let private players state dispatch =
     section [ attr.class' "col-md-auto m-2 m-md-4" ] [
         h6 [] [
             text "Players"
@@ -152,17 +182,17 @@ let private configurePagePlayers state dispatch =
             forEach (state.Config.ConfigPlayers |> PlayerList.configValue) <| fun player ->
                 let (PlayerName name) = player.Name
 
-                li [ attr.class' "list-group-item d-flex flex-row align-items-center justify-content-between" ] [
+                li [ attr.class' "list-group-item" ] [
                     cond state.EditMode <| function
                         | EditPlayer { Id = playerId; Name = editedName; Target = target } when playerId = player.Id ->
-                            configurePageEditedPlayer editedName target dispatch
+                            editedPlayerItem editedName target dispatch
                         | _ ->
-                            configurePagePlayer state player name dispatch
+                            playerItem state player name dispatch
                 ]
         ]
     ]
 
-let private configurePagePlayerRequests state dispatch =
+let private playerRequests state dispatch =
     section [ attr.class' "col-md-auto m-2 m-md-4" ] [
         h6 [] [
             text "Player Requests"
@@ -197,13 +227,13 @@ let private configurePagePlayerRequests state dispatch =
         ]
     ]
 
-let configurePage js state joinUrl dispatch =
+let configPage js state joinUrl dispatch =
     div [ attr.class' "container" ] [
-        configurePageHeader js state joinUrl dispatch
+        header js state joinUrl dispatch
         
         div [ attr.class' "row justify-content-md-center" ] [
-            configurePagePlayers state dispatch
-            configurePagePlayerRequests state dispatch
+            players state dispatch
+            playerRequests state dispatch
         ]
 
         div [ attr.class' "d-flex flex-row justify-content-center m-2" ] [

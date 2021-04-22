@@ -142,3 +142,9 @@ let removePlayer playerId state model = monad {
 
     return! model |> Flow.updateSession newState
 }
+
+let movePlayer move playerId state model =
+    let players = state.Config.ConfigPlayers |> move playerId
+    let newState = { state with Config = { state.Config with ConfigPlayers = players } }
+
+    { model with State = ConfiguringSession newState } |> pureFlow

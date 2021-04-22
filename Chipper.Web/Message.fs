@@ -36,6 +36,8 @@ type ConfigMessage =
     | AcceptPlayerRequest of PlayerId
     | RejectPlayerRequest of PlayerId
     | RemovePlayer of PlayerId
+    | MovePlayerUp of PlayerId
+    | MovePlayerDown of PlayerId
 
 type Message =
     | GenericMessage of GenericMessage
@@ -76,6 +78,8 @@ module Message =
     let acceptPlayerRequest = AcceptPlayerRequest >> ConfigMessage
     let rejectPlayerRequest = RejectPlayerRequest >> ConfigMessage
     let removePlayer = RemovePlayer >> ConfigMessage
+    let movePlayerUp = MovePlayerUp >> ConfigMessage
+    let movePlayerDown = MovePlayerDown >> ConfigMessage
 
     let handleError message =
         match message with

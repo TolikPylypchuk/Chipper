@@ -138,6 +138,8 @@ module Player =
     let addChips chips player = { player with Chips = player.Chips @ chips |> List.sort }
 
     let removeChips chips player = { player with Chips = player.Chips |> List.except chips }
+    
+    let id (player : Player) = player.Id
 
 [<AutoOpen>]
 module PlayerList =
@@ -195,6 +197,19 @@ module PlayerList =
             |> Ok
         else
             editedName |> PlayerName.value |> DuplicatePlayerName |> Error
+
+    let movePlayer shouldSwap (players : ConfigPlayerList) =
+        let rec swap (players : Player list) =
+            match players with
+            | first :: second :: rest when shouldSwap (first, second) -> second :: first :: rest
+            | head :: tail -> head :: (swap tail)
+            | players -> players
+
+        { players with Players = players.Players |> swap }
+
+    let movePlayerUp playerId = movePlayer (snd >> Player.id >> (=) playerId)
+
+    let movePlayerDown playerId = movePlayer (fst >> Player.id >> (=) playerId)
 
 [<RequireQualifiedAccess>]
 module GameSessionName =
