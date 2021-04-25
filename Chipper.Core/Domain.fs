@@ -10,17 +10,16 @@ type ChipperError =
 [<RequireQualifiedAccess>]
 module Domain =
 
-    let private asDomainError result = result |> Result.mapError DomainError
+    let private asDomainError error result = result |> Result.mapError (error >> DomainError)
 
-    let chip = Chip.create >> Result.mapError ChipError >> asDomainError
+    let chip = Chip.create >> asDomainError ChipError
 
-    let betAmount = BetAmount.create >> Result.mapError BetAmountError >> asDomainError
+    let betAmount = BetAmount.create >> asDomainError BetAmountError
 
-    let playerName = PlayerName.create >> Result.mapError PlayerNameError >> asDomainError
+    let playerName = PlayerName.create >> asDomainError PlayerNameError
 
-    let editPlayerName playerId players =
-        PlayerList.editPlayerName playerId players >> Result.mapError PlayerListError >> asDomainError
+    let editPlayerName playerId players = PlayerList.editPlayerName playerId players >> asDomainError PlayerListError
 
-    let gameSessionName = GameSessionName.create >> Result.mapError GameSessionNameError >> asDomainError
+    let gameSessionName = GameSessionName.create >> asDomainError GameSessionNameError
 
-    let gameSession = GameSession.fromConfig >> Result.mapError GameSessionError >> asDomainError
+    let gameSession = GameSession.fromConfig >> asDomainError GameSessionError

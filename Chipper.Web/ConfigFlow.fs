@@ -8,7 +8,7 @@ open FsToolkit.ErrorHandling
 open Chipper.Core
 open Chipper.Web
 
-let private doAcceptPlayerRequest playerId state name model = monad {
+let private doAcceptPlayerRequest playerId state name model : Flow<Model> = monad {
     let playerRequests =
         state.Config.ConfigPlayerRequests
         |> List.filter (fun request -> request.PlayerId <> playerId)
@@ -146,5 +146,11 @@ let removePlayer playerId state model = monad {
 let movePlayer move playerId state model =
     let players = state.Config.ConfigPlayers |> move playerId
     let newState = { state with Config = { state.Config with ConfigPlayers = players } }
+    
+    model |> Flow.updateSession newState
 
-    { model with State = ConfiguringSession newState } |> pureFlow
+let setChipEqualDistributionValue chip value chips state model =
+    let newDistribution = chips |> Map.add chip value |> EqualChipDitribution
+    let newState = { state with Config = { state.Config with ConfigChipDistribution = newDistribution } }
+    
+    model |> Flow.updateSession newState

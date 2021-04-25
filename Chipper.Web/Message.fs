@@ -38,6 +38,7 @@ type ConfigMessage =
     | RemovePlayer of PlayerId
     | MovePlayerUp of PlayerId
     | MovePlayerDown of PlayerId
+    | SetChipEqualDistributionValue of Chip * int
 
 type Message =
     | GenericMessage of GenericMessage
@@ -80,6 +81,7 @@ module Message =
     let removePlayer = RemovePlayer >> ConfigMessage
     let movePlayerUp = MovePlayerUp >> ConfigMessage
     let movePlayerDown = MovePlayerDown >> ConfigMessage
+    let setChipEqualDistributionValue chip num = SetChipEqualDistributionValue (chip, num) |> ConfigMessage
 
     let handleError message =
         match message with

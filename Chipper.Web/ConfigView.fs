@@ -227,6 +227,35 @@ let private playerRequests state dispatch =
         ]
     ]
 
+let private chipDistribution state dispatch =
+    section [] [
+        h6 [ attr.class' "text-center" ] [
+            text "Chip Distribution"
+        ]
+
+        cond state.Config.ConfigChipDistribution <| function
+        | EqualChipDitribution chips ->
+            table [ attr.class' "mx-auto"; attr.style "border: none" ] [
+                tbody [] [
+                    forEach (chips |> Map.toList) <| fun (Chip value as chip, num) ->
+                        tr [] [
+                            td [ attr.class' "align-self-end" ] [
+                                text <| string value
+                            ]
+
+                            td [] [
+                                input [
+                                    attr.name $"chip-{value}-value"
+                                    attr.type' "number"
+                                    attr.class' "m-1"
+                                    bind.input.int num (dispatch << Message.setChipEqualDistributionValue chip)
+                                ]
+                            ]
+                        ]
+                ]
+            ]
+    ]
+
 let configPage js state joinUrl dispatch =
     div [ attr.class' "container" ] [
         header js state joinUrl dispatch
@@ -234,6 +263,10 @@ let configPage js state joinUrl dispatch =
         div [ attr.class' "row justify-content-md-center" ] [
             players state dispatch
             playerRequests state dispatch
+        ]
+
+        div [ attr.class' "row justify-content-md-center" ] [
+            chipDistribution state dispatch
         ]
 
         div [ attr.class' "d-flex flex-row justify-content-center m-2" ] [

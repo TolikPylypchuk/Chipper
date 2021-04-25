@@ -129,6 +129,10 @@ let updateConfig message model =
     | MovePlayerDown playerId, ConfiguringSession state ->
         model |> ConfigFlow.movePlayer PlayerList.movePlayerDown playerId state
 
+    | SetChipEqualDistributionValue (chip, value),
+      ConfiguringSession ({ Config = { ConfigChipDistribution = EqualChipDitribution chips } } as state) ->
+        model |> ConfigFlow.setChipEqualDistributionValue chip value chips state
+
     | _ ->
         model |> pureFlow
 
