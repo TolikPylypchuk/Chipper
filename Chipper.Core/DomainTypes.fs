@@ -62,6 +62,12 @@ type ConfigPlayerList = private {
     Players : List<Player>
 }
 
+type BettingType = NoBetsBeforeStart
+
+type RaiseType = NoLimit
+
+type BetRoundNumber = private BetRoundNumber of int
+
 type GameSessionConfig = {
     ConfigId : GameSessionId
     ConfigName : GameSessionName
@@ -69,6 +75,9 @@ type GameSessionConfig = {
     ConfigDate : DateTime
     ConfigPlayers : ConfigPlayerList
     ConfigChipDistribution : ChipDistribution
+    ConfigBetRoundNumber : int
+    ConfigBettingType : BettingType
+    ConfigRaiseType : RaiseType
 }
 
 type PlayerList = private PlayerList of NonEmptyList<Player>
@@ -78,16 +87,22 @@ type GameSession = private {
     Name : GameSessionName
     Date : DateTime
     Players : PlayerList
+    BetRoundNumber : BetRoundNumber
+    BettingType : BettingType
+    RaiseType : RaiseType
     Games : Game list
 }
 
 [<RequireQualifiedAccess>]
 module Chip =
 
+    let minValue = 0
+    let maxValue = 1_000_000
+
     let create value =
-        if value > 0 && value <= 1_000_000
+        if value > minValue && value <= maxValue
         then Chip value |> Ok
-        else InvalidChipValue value |> Error
+        else ChipValueOutOfRange value |> Error
 
     let value (Chip chip) = chip
 
@@ -100,17 +115,20 @@ module Chip =
 [<RequireQualifiedAccess>]
 module BetAmount =
 
+    let minValue = 0
+    let maxValue = 2_000_000_000
+
     let create amount =
-        if amount > 0 && amount <= 2_000_000_000
+        if amount > minValue && amount <= maxValue
         then BetAmount amount |> Ok
-        else InvalidBetAmout amount |> Error
+        else BetAmoutOutOfRange amount |> Error
 
     let value (BetAmount amount) = amount
 
 [<RequireQualifiedAccess>]
 module PlayerName =
 
-    let private maxLength = 50
+    let maxLength = 50
 
     let create name =
         if (not <| String.IsNullOrEmpty(name)) && name.Length <= maxLength
@@ -214,17 +232,34 @@ module PlayerList =
 [<RequireQualifiedAccess>]
 module GameSessionName =
 
+    let maxLength = 50
+
     let create name =
         if String.IsNullOrWhiteSpace(name) then
             EmptyGameSessionName |> Error
         else
             let name = name.Trim()
             let nameLength = name |> String.length
-            if nameLength <= 50
+            if nameLength <= maxLength
             then GameSessionName name |> Ok
-            else TooLongGameSessionName name |> Error
+            else GameSessionNameTooLong name |> Error
 
     let value (GameSessionName name) = name
+
+[<RequireQualifiedAccess>]
+module BetRoundNumber =
+
+    let min = 0
+    let max = 20
+
+    let defaultNumber = BetRoundNumber 4
+
+    let create num =
+        if num >= min && num <= min
+        then num |> BetRoundNumber |> Ok
+        else num |> BetRoundNumberOutOfRange |> Error
+
+    let value (BetRoundNumber num) = num
     
 [<RequireQualifiedAccess>]
 module GameSession =
@@ -246,10 +281,14 @@ module GameSession =
                 ]
                 |> Map.ofList
                 |> EqualChipDitribution
+            ConfigBetRoundNumber = BetRoundNumber.defaultNumber |> BetRoundNumber.value
+            ConfigBettingType = NoBetsBeforeStart
+            ConfigRaiseType = NoLimit
         }
 
     let private assignChips (EqualChipDitribution chips) (PlayerList players) =
-        if chips |> Map.toList |> List.map snd |> List.exists ((<) 0) then
+        let chipNumbers = chips |> Map.toList |> List.map snd
+        if chipNumbers |> List.exists ((<) 0) || chipNumbers |> List.forall ((=) 0) then
             Error InvalidChipDistribution
         else
             let chipsPerPlayer =
@@ -266,18 +305,26 @@ module GameSession =
         let numPlayers = config.ConfigPlayers.Players |> List.length
         if numPlayers > 0 && numPlayers <= 20 then
             let allPlayers = PlayerList.fromConfig config.ConfigPlayers
-            allPlayers
-            |> assignChips config.ConfigChipDistribution
-            |>> fun players ->
-                {
+            monad {
+                let! players = allPlayers |> assignChips config.ConfigChipDistribution
+                let! betRoundNumber =
+                    config.ConfigBetRoundNumber
+                    |> BetRoundNumber.create
+                    |> Result.mapError InvalidBetRoundNumber
+
+                return {
                     Id = config.ConfigId
                     Name = config.ConfigName
                     Date = config.ConfigDate
                     Players = players
+                    BetRoundNumber = betRoundNumber
+                    BettingType = config.ConfigBettingType
+                    RaiseType = config.ConfigRaiseType
                     Games = []
                 }
+            }
         else
-            InvalidGamePlayersNumber numPlayers |> Error
+            GamePlayersNumberOutOfRange numPlayers |> Error
 
     let id session = session.Id
     let players session = session.Players

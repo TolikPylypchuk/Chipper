@@ -154,3 +154,6 @@ let setChipEqualDistributionValue chip value chips state model =
     let newState = { state with Config = { state.Config with ConfigChipDistribution = newDistribution } }
     
     model |> Flow.updateSession newState
+
+let inputBetRoundNumber num state model =
+    model |> Flow.updateSession { state with Config = { state.Config with ConfigBetRoundNumber = num } }

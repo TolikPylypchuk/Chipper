@@ -256,6 +256,26 @@ let private chipDistribution state dispatch =
             ]
     ]
 
+let private otherSettings state dispatch =
+    section [ attr.class' "mt-2" ] [
+        h6 [ attr.class' "text-center" ] [
+            text "Other Settings"
+        ]
+
+        div [ attr.class' "d-flex flex-row justify-content-center" ] [
+            p [ attr.class' "m-1" ] [
+                text <| "Number of betting rounds:"
+            ]
+
+            input [
+                attr.class' "m-1"
+                attr.name "bet-round-number"
+                attr.type' "number"
+                bind.input.int state.Config.ConfigBetRoundNumber (dispatch << Message.inputBetRoundNumber)
+            ]
+        ]
+    ]
+
 let configPage js state joinUrl dispatch =
     div [ attr.class' "container" ] [
         header js state joinUrl dispatch
@@ -267,6 +287,10 @@ let configPage js state joinUrl dispatch =
 
         div [ attr.class' "row justify-content-md-center" ] [
             chipDistribution state dispatch
+        ]
+        
+        div [ attr.class' "row justify-content-md-center" ] [
+            otherSettings state dispatch
         ]
 
         div [ attr.class' "d-flex flex-row justify-content-center m-2" ] [

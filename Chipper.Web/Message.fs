@@ -39,6 +39,7 @@ type ConfigMessage =
     | MovePlayerUp of PlayerId
     | MovePlayerDown of PlayerId
     | SetChipEqualDistributionValue of Chip * int
+    | InputBetRoundNumber of int
 
 type Message =
     | GenericMessage of GenericMessage
@@ -82,6 +83,7 @@ module Message =
     let movePlayerUp = MovePlayerUp >> ConfigMessage
     let movePlayerDown = MovePlayerDown >> ConfigMessage
     let setChipEqualDistributionValue chip num = SetChipEqualDistributionValue (chip, num) |> ConfigMessage
+    let inputBetRoundNumber = InputBetRoundNumber >> ConfigMessage
 
     let handleError message =
         match message with

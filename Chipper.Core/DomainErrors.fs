@@ -1,8 +1,8 @@
 namespace Chipper.Core
 
-type ChipError = InvalidChipValue of int
+type ChipError = ChipValueOutOfRange of int
 
-type BetAmountError = InvalidBetAmout of int
+type BetAmountError = BetAmoutOutOfRange of int
 
 type PlayerNameError =
     | InvalidPlayerName of string
@@ -12,11 +12,15 @@ type PlayerListError =
 
 type GameSessionNameError =
     | EmptyGameSessionName
-    | TooLongGameSessionName of string
+    | GameSessionNameTooLong of string
+
+type BetRoundNumberError =
+    | BetRoundNumberOutOfRange of int
 
 type GameSessionError =
-    | InvalidGamePlayersNumber of int
+    | GamePlayersNumberOutOfRange of int
     | InvalidChipDistribution
+    | InvalidBetRoundNumber of BetRoundNumberError
 
 type DomainError =
     | ChipError of ChipError
@@ -24,4 +28,5 @@ type DomainError =
     | PlayerNameError of PlayerNameError
     | PlayerListError of PlayerListError
     | GameSessionNameError of GameSessionNameError
+    | BetRoundNumberError of BetRoundNumberError
     | GameSessionError of GameSessionError

@@ -32,8 +32,7 @@ let asMessage page =
 let private getConfigSessionState repo config = async {
     match! repo |> Persistence.getSession config.ConfigId with
     | Ok (ConfigurableSession config) ->
-        let state = { Config = config; EditMode = NoEdit }
-        return ConfiguringSession state |> Some
+        return ConfiguringSession { Config = config; EditMode = NoEdit } |> Some
     | _ ->
         return None
 }

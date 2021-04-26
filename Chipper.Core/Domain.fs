@@ -21,5 +21,7 @@ module Domain =
     let editPlayerName playerId players = PlayerList.editPlayerName playerId players >> asDomainError PlayerListError
 
     let gameSessionName = GameSessionName.create >> asDomainError GameSessionNameError
+    
+    let betRoundNumber = BetRoundNumber.create >> asDomainError BetRoundNumberError
 
     let gameSession = GameSession.fromConfig >> asDomainError GameSessionError

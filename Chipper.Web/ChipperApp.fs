@@ -132,6 +132,9 @@ let updateConfig message model =
     | SetChipEqualDistributionValue (chip, value),
       ConfiguringSession ({ Config = { ConfigChipDistribution = EqualChipDitribution chips } } as state) ->
         model |> ConfigFlow.setChipEqualDistributionValue chip value chips state
+        
+    | InputBetRoundNumber num, ConfiguringSession state ->
+        model |> ConfigFlow.inputBetRoundNumber num state
 
     | _ ->
         model |> pureFlow
