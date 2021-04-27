@@ -19,7 +19,7 @@ let homePage dispatch =
                 button [
                     attr.type' "button"
                     attr.class' "btn btn-primary btn-lg"
-                    on.click (fun _ -> dispatch Message.startGameSession)
+                    on.click (fun _ -> dispatch Message.startGameSessionConfig)
                 ] [
                     text "Start playing"
                 ]

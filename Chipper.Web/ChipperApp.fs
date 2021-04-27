@@ -51,10 +51,10 @@ let updateGeneric message model =
 
 let updateGameStart message model =
     match message, model.State with
-    | StartGameSession, ConfiguringSession _ ->
+    | StartGameSessionConfig, ConfiguringSession _ ->
         model |> GameStartFlow.startSessionWhenConfiguring
 
-    | StartGameSession, _ ->
+    | StartGameSessionConfig, _ ->
         model |> GameStartFlow.startSession
 
     | InputSessionName sessionName, AddingSessionName { HostName = hostName } ->
@@ -135,6 +135,9 @@ let updateConfig message model =
         
     | InputBetRoundNumber num, ConfiguringSession state ->
         model |> ConfigFlow.inputBetRoundNumber num state
+
+    | StartGameSession gameSession, ConfiguringSession state ->
+        model |> ConfigFlow.startGameSession gameSession state
 
     | _ ->
         model |> pureFlow

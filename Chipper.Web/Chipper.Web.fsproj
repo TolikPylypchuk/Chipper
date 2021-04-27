@@ -16,9 +16,11 @@
     <Compile Include="EventFlow.fs" />
     <Compile Include="GameStartFlow.fs" />
     <Compile Include="ConfigFlow.fs" />
+    <Compile Include="PlayFlow.fs" />
     <Compile Include="View.fs" />
     <Compile Include="GameStartView.fs" />
     <Compile Include="ConfigView.fs" />
+    <Compile Include="PlayView.fs" />
     <Compile Include="ChipperApp.fs" />
     <Compile Include="Services.fs" />
     <Compile Include="Program.fs" />

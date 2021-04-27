@@ -1,6 +1,7 @@
 module Chipper.Web.EventFlow
 
 open FSharpPlus
+open FSharpPlus.Data
 
 open Chipper.Core
 
@@ -74,6 +75,20 @@ let private onGameSessionNameChangedWhenAwaitingGameStartRemoved player newName 
 let private onGameSessionNameChangedWhenJoinRequestCanceled newName model =
     { model with State = JoinRequestCanceled newName } |> pureFlow
 
+let private onGameSessionStarted gameSession joiningPlayer model =
+    let player =
+        gameSession
+        |> GameSession.players
+        |> PlayerList.value
+        |> NonEmptyList.toList
+        |> List.filter (Player.id >> (=) joiningPlayer.ValidId)
+        |> List.tryHead
+
+    match player with
+    | Some player -> { model with Page = PlayPage; State = Playing { GameSession = gameSession; Player = player } }
+    | None -> model
+    |> pureFlow
+
 let receiveEvent event model =
     match event, model.State with
     | PlayerAccessRequested request, ConfiguringSession state ->
@@ -116,6 +131,9 @@ let receiveEvent event model =
 
     | GameSessionNameChanged newName, JoinRequestCanceled _ ->
         model |> onGameSessionNameChangedWhenJoinRequestCanceled newName
+
+    | GameSessionStarted gameSession, AwaitingGameStart player ->
+        model |> onGameSessionStarted gameSession player
 
     | _ ->
         model |> pureFlow

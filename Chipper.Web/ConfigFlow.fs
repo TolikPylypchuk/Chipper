@@ -5,6 +5,8 @@ open FSharpPlus.Data
 
 open FsToolkit.ErrorHandling
 
+open Elmish
+
 open Chipper.Core
 open Chipper.Web
 
@@ -151,9 +153,34 @@ let movePlayer move playerId state model =
 
 let setChipEqualDistributionValue chip value chips state model =
     let newDistribution = chips |> Map.add chip value |> EqualChipDitribution
+    printfn "--------------------------------------------------------------------------------------------------"
+    printfn "%O" newDistribution
     let newState = { state with Config = { state.Config with ConfigChipDistribution = newDistribution } }
     
     model |> Flow.updateSession newState
 
 let inputBetRoundNumber num state model =
     model |> Flow.updateSession { state with Config = { state.Config with ConfigBetRoundNumber = num } }
+
+let startGameSession gameSession state model = monad {
+    let! storage = Env.askStorage
+    let! repo = Env.askRepo
+    let! mediator = Env.askMediator
+
+    let result = asyncResult {
+        do! repo |> Persistence.updateSession (PersistentSession gameSession)
+
+        let host = state.Config.ConfigPlayers |> PlayerList.configHost
+        let localState = Playing { GameSession = gameSession; Player = host }
+
+        do! storage.SetState localState
+
+        mediator |> EventMediator.post (GameSessionStarted gameSession) (gameSession |> GameSession.id)
+
+        return Message.setModel { model with Page = PlayPage; State = localState }
+    }
+
+    do! cmd (result |> Message.handleAsyncError |> Cmd.OfAsync.result)
+
+    return model
+}

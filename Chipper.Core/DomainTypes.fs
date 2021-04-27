@@ -249,13 +249,13 @@ module GameSessionName =
 [<RequireQualifiedAccess>]
 module BetRoundNumber =
 
-    let min = 0
+    let min = 1
     let max = 20
 
     let defaultNumber = BetRoundNumber 4
 
     let create num =
-        if num >= min && num <= min
+        if num >= min && num <= max
         then num |> BetRoundNumber |> Ok
         else num |> BetRoundNumberOutOfRange |> Error
 
@@ -263,6 +263,9 @@ module BetRoundNumber =
     
 [<RequireQualifiedAccess>]
 module GameSession =
+
+    let minPlayers = 2
+    let maxPlayers = 20
 
     let defaultConfig id name date hostId hostName =
         {
@@ -288,7 +291,7 @@ module GameSession =
 
     let private assignChips (EqualChipDitribution chips) (PlayerList players) =
         let chipNumbers = chips |> Map.toList |> List.map snd
-        if chipNumbers |> List.exists ((<) 0) || chipNumbers |> List.forall ((=) 0) then
+        if chipNumbers |> List.exists ((>) 0) || chipNumbers |> List.forall ((=) 0) then
             Error InvalidChipDistribution
         else
             let chipsPerPlayer =
@@ -302,8 +305,8 @@ module GameSession =
             |> Ok
 
     let fromConfig config =
-        let numPlayers = config.ConfigPlayers.Players |> List.length
-        if numPlayers > 0 && numPlayers <= 20 then
+        let numPlayers = 1 + (config.ConfigPlayers.Players |> List.length)
+        if numPlayers >= minPlayers && numPlayers <= maxPlayers then
             let allPlayers = PlayerList.fromConfig config.ConfigPlayers
             monad {
                 let! players = allPlayers |> assignChips config.ConfigChipDistribution

@@ -19,7 +19,7 @@ let router = {
     getRoute = function
         | HomePage -> "/"
         | StartPage -> "/start"
-        | JoinPage id -> sprintf "/join/%O" id
+        | JoinPage id -> $"/join/{id}"
         | ConfigurePage -> "/configure"
         | PlayPage -> "/play"
         | NotImplementedPage -> "/not-implemented"

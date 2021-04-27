@@ -56,12 +56,18 @@ type ConfigSessionEditMode =
 type ConfigSessionState = {
     Config : GameSessionConfig
     EditMode : ConfigSessionEditMode
+    Target : Result<GameSession, GameSessionError>
 }
 
 type PlayerRenameInfo = {
     HostName : PlayerName
     PlayerId : PlayerId
     NewName : PlayerName
+}
+
+type GameSessionState = {
+    GameSession : GameSession
+    Player : Player
 }
 
 type LocalState =
@@ -76,6 +82,7 @@ type LocalState =
     | AwaitingGameStartRenamed of ValidJoiningPlayer * PlayerRenameInfo
     | JoinRequestCanceled of GameSessionName
     | ConfiguringSession of ConfigSessionState
+    | Playing of GameSessionState
 
 type Model = {
     Page : Page

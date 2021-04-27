@@ -32,7 +32,7 @@ let asMessage page =
 let private getConfigSessionState repo config = async {
     match! repo |> Persistence.getSession config.ConfigId with
     | Ok (ConfigurableSession config) ->
-        return ConfiguringSession { Config = config; EditMode = NoEdit } |> Some
+        return ConfiguringSession { Config = config; EditMode = NoEdit; Target = GameSession.fromConfig config } |> Some
     | _ ->
         return None
 }
@@ -202,7 +202,7 @@ let updateSession state model : Flow<Model> = monad {
 
     let result = asyncResult {
         do! repo |> Persistence.updateSession (ConfigurableSession state.Config)
-        let localState = ConfiguringSession state
+        let localState = ConfiguringSession { state with Target = GameSession.fromConfig state.Config }
         do! storage.SetState localState
         return Message.setModel { model with Page = ConfigurePage; State = localState }
     }

@@ -276,6 +276,27 @@ let private otherSettings state dispatch =
         ]
     ]
 
+let errors state =
+    cond state.Target <| function
+    | Ok _ ->
+        empty
+    | Error error ->
+        section [ attr.class' "mt-3 text-center text-danger" ] [
+            p [] [
+                cond error <| function
+                | GamePlayersNumberOutOfRange num ->
+                    text <|
+                        $"Invalid number of players: {num}, " +
+                        $"must be between {GameSession.minPlayers} and {GameSession.maxPlayers}"
+                | InvalidChipDistribution ->
+                    text "Invalid chip distribution"
+                | InvalidBetRoundNumber (BetRoundNumberOutOfRange num) ->
+                    text <|
+                        $"Invalid number of betting rounds: {num}, " +
+                        $"must be between {BetRoundNumber.min} and {BetRoundNumber.max}"
+            ]
+        ]
+
 let configPage js state joinUrl dispatch =
     div [ attr.class' "container" ] [
         header js state joinUrl dispatch
@@ -292,12 +313,20 @@ let configPage js state joinUrl dispatch =
         div [ attr.class' "row justify-content-md-center" ] [
             otherSettings state dispatch
         ]
+        
+        div [ attr.class' "row justify-content-md-center" ] [
+            errors state
+        ]
 
-        div [ attr.class' "d-flex flex-row justify-content-center m-2" ] [
+        div [ attr.class' "d-flex flex-row justify-content-center" ] [
             button [
                 attr.type' "button"
-                attr.class' "btn btn-primary btn-lg m-2"
-                attr.disabled true
+                attr.class' "btn btn-primary btn-lg mt-3"
+                attr.disabled <| match state.Target with Ok _ -> false | Error _ -> true
+                on.click <| fun _ ->
+                    match state.Target with
+                    | Ok gameSession -> dispatch <| Message.startGameSession gameSession
+                    | _ -> ()
             ] [
                 text "Start the game"
             ]

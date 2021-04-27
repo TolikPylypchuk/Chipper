@@ -15,7 +15,7 @@ type GenericMessage =
     | CustomMessage of obj
 
 type GameStartMessage =
-    | StartGameSession
+    | StartGameSessionConfig
     | InputSessionName of string
     | InputPlayerName of string
     | SaveSessionName of GameSessionName * PlayerName
@@ -40,6 +40,7 @@ type ConfigMessage =
     | MovePlayerDown of PlayerId
     | SetChipEqualDistributionValue of Chip * int
     | InputBetRoundNumber of int
+    | StartGameSession of GameSession
 
 type Message =
     | GenericMessage of GenericMessage
@@ -60,7 +61,7 @@ module Message =
     let receiveEvent = ReceiveEvent >> GenericMessage
     let custom = CustomMessage >> GenericMessage
 
-    let startGameSession = StartGameSession |> GameStartMessage
+    let startGameSessionConfig = StartGameSessionConfig |> GameStartMessage
     let inputSessionName = InputSessionName >> GameStartMessage
     let inputPlayerName = InputPlayerName >> GameStartMessage
     let saveSessionName = SaveSessionName >> GameStartMessage
@@ -84,6 +85,7 @@ module Message =
     let movePlayerDown = MovePlayerDown >> ConfigMessage
     let setChipEqualDistributionValue chip num = SetChipEqualDistributionValue (chip, num) |> ConfigMessage
     let inputBetRoundNumber = InputBetRoundNumber >> ConfigMessage
+    let startGameSession = StartGameSession >> ConfigMessage
 
     let handleError message =
         match message with

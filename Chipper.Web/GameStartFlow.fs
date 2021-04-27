@@ -38,7 +38,7 @@ let saveSessionNameWhenConfiguring model =
     { model with Page = ConfigurePage } |> pureFlow
 
 let onSessionSaved config model : Flow<Model> = monad {
-    let state = ConfiguringSession { Config = config; EditMode = NoEdit }
+    let state = ConfiguringSession { Config = config; EditMode = NoEdit; Target = GameSession.fromConfig config }
 
     do! Flow.setStateSimple state
     do! Flow.createEventLoop config.ConfigId
