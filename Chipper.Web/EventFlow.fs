@@ -85,9 +85,13 @@ let private onGameSessionStarted gameSession joiningPlayer model =
         |> List.tryHead
 
     match player with
-    | Some player -> { model with Page = PlayPage; State = Playing { GameSession = gameSession; Player = player } }
-    | None -> model
-    |> pureFlow
+    | Some player ->
+        monad {
+            let state = Playing { GameSession = gameSession; Player = player }
+            do! Flow.setStateSimple state
+            return { model with Page = PlayPage; State = state }
+        }
+    | None -> model |> pureFlow
 
 let receiveEvent event model =
     match event, model.State with

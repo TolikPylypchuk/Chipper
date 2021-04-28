@@ -330,10 +330,13 @@ module GameSession =
             GamePlayersNumberOutOfRange numPlayers |> Error
 
     let id session = session.Id
+    let name session = session.Name
+    let date session = session.Date
     let players session = session.Players
+    let betRoundNumber session = session.BetRoundNumber
+    let bettingType session = session.BettingType
+    let raiseType session = session.RaiseType
     let games session = session.Games
-
-    let name (GameSessionName name) = name
 
 [<AutoOpen>]
 module Patterns =

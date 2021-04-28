@@ -38,6 +38,11 @@ module Toast =
                     text <|
                         $"It appears that you were previously waiting to start a game: {sessionName}. " +
                         "Would you like to continue?"
+                | Playing { GameSession = gameSession } ->
+                    text <|
+                        "It appears that you were previously playing a game: " +
+                        $"{gameSession |> GameSession.name |> GameSessionName.value}. " +
+                        "Would you like to continue?"
                 | _ ->
                     text "Uh, I got confused and showed you this message by mistake. Carry on"
 

@@ -7,7 +7,7 @@ open Chipper.Core
 let private header js state joinUrl dispatch =
     concat [
         h1 [ attr.class' "display-1 p-lg-4 p-md-3 p-2 text-center" ] [
-            text $"Configure {state.Config.ConfigName |> GameSession.name}"
+            text $"Configure {state.Config.ConfigName |> GameSessionName.value}"
         ]
 
         cond state.EditMode <| function
@@ -300,7 +300,7 @@ let errors state =
 let configPage js state joinUrl dispatch =
     div [ attr.class' "container" ] [
         header js state joinUrl dispatch
-        
+
         div [ attr.class' "row justify-content-md-center" ] [
             players state dispatch
             playerRequests state dispatch
@@ -309,13 +309,9 @@ let configPage js state joinUrl dispatch =
         div [ attr.class' "row justify-content-md-center" ] [
             chipDistribution state dispatch
         ]
-        
+
         div [ attr.class' "row justify-content-md-center" ] [
             otherSettings state dispatch
-        ]
-        
-        div [ attr.class' "row justify-content-md-center" ] [
-            errors state
         ]
 
         div [ attr.class' "d-flex flex-row justify-content-center" ] [
@@ -330,5 +326,9 @@ let configPage js state joinUrl dispatch =
             ] [
                 text "Start the game"
             ]
+        ]
+
+        div [ attr.class' "row justify-content-md-center" ] [
+            errors state
         ]
     ]

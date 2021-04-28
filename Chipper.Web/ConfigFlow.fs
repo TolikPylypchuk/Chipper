@@ -153,10 +153,8 @@ let movePlayer move playerId state model =
 
 let setChipEqualDistributionValue chip value chips state model =
     let newDistribution = chips |> Map.add chip value |> EqualChipDitribution
-    printfn "--------------------------------------------------------------------------------------------------"
-    printfn "%O" newDistribution
     let newState = { state with Config = { state.Config with ConfigChipDistribution = newDistribution } }
-    
+
     model |> Flow.updateSession newState
 
 let inputBetRoundNumber num state model =

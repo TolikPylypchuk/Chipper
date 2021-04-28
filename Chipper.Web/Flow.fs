@@ -20,15 +20,6 @@ let setError e model : Flow<Model> =
     printfn "An unhandled error appeared: %O" e
     model |> pureFlow
 
-let asMessage page =
-    function
-    | Ok result ->
-        Message.setModel result
-    | Error (PersistenceError (GetSessionError (SessionNotFound _))) ->
-        Message.setModel <| Model.simple page JoiningInvalidSession
-    | Error e ->
-        Message.setError e
-
 let private getConfigSessionState repo config = async {
     match! repo |> Persistence.getSession config.ConfigId with
     | Ok (ConfigurableSession config) ->
@@ -58,7 +49,7 @@ let private getJoinConfirmationState repo player = async {
         return None
 }
 
-let private getGameStartState repo player = async {
+let private getAwaitingGameStartState repo player = async {
     match! repo |> Persistence.getSession player.ValidGameSessionId with
     | Ok (ConfigurableSession config) ->
         let player =
@@ -68,6 +59,14 @@ let private getGameStartState repo player = async {
             }
 
         return Some <| AwaitingGameStart player
+    | _ ->
+        return None
+}
+
+let private getPlayingState repo gameSessionState = async {
+    match! repo |> Persistence.getSession (gameSessionState.GameSession |> GameSession.id) with
+    | Ok (PersistentSession gameSession) ->
+        return Some <| Playing { GameSession = gameSession; Player = gameSessionState.Player }
     | _ ->
         return None
 }
@@ -82,7 +81,8 @@ let getState : Flow<Async<LocalState>> = monad {
             match localState with
             | ConfiguringSession { Config = config } -> config |> getConfigSessionState repo
             | AwaitingJoinConfirmation player -> player |> getJoinConfirmationState repo
-            | AwaitingGameStart player -> player |> getGameStartState repo
+            | AwaitingGameStart player -> player |> getAwaitingGameStartState repo
+            | Playing gameSessionState -> gameSessionState |> getPlayingState repo
             | _ -> async.Return None
 
         match currentState with
@@ -126,6 +126,15 @@ let getSessionToJoin id : Flow<Async<Message>> = monad {
         return Model.simple page (JoiningSession player)
     }
 
+    let asMessage page =
+        function
+        | Ok result ->
+            Message.setModel result
+        | Error (PersistenceError (GetSessionError (SessionNotFound _))) ->
+            Message.setModel <| Model.simple page JoiningInvalidSession
+        | Error e ->
+            Message.setError e
+
     result |> Async.map (asMessage page)
 }
 
@@ -152,6 +161,11 @@ let private loadConfiguringState id state model : Flow<Model> = monad {
     return { model with State = state; LocalState = None; IsLoaded = true }
 }
 
+let private loadPlayingState state model : Flow<Model> = monad {
+    do! createEventLoop (state.GameSession |> GameSession.id)
+    return { model with State = Playing state; LocalState = None; IsLoaded = true }
+}
+
 let loadState state model =
     match model.Page, state with
     | StartPage, state ->
@@ -163,6 +177,8 @@ let loadState state model =
         model |> loadJoinPageAwaitingState player state
     | ConfigurePage, (ConfiguringSession { Config = { ConfigId = id } } as state) ->
         model |> loadConfiguringState id state
+    | PlayPage, Playing state ->
+        model |> loadPlayingState state
     | _, NoState ->
         { model with Page = HomePage; LocalState = None; IsLoaded = true } |> pureFlow
     | _ ->
@@ -179,12 +195,19 @@ let private recoverJoinAwaitingConfirmation player state model : Flow<Model> = m
     return { model with Page = JoinPage rawId; State = state; LocalState = None }
 }
 
+let private recoverPlayingGame state model : Flow<Model> = monad {
+    do! createEventLoop (state.GameSession |> GameSession.id)
+    return { model with Page = PlayPage; State = Playing state; LocalState = None }
+}
+
 let recoverLocalState model =
     match model.LocalState with
     | Some (ConfiguringSession { Config = { ConfigId = id } } as state) ->
         model |> recoverConfiguringSession id state
     | Some (AwaitingJoinConfirmation player | AwaitingGameStart player as state) ->
         model |> recoverJoinAwaitingConfirmation player state
+    | Some (Playing state) ->
+        model |> recoverPlayingGame state
     | _ ->
         { model with LocalState = None } |> pureFlow
 

@@ -193,6 +193,9 @@ let mainView js createJoinUrl model dispatch =
         let joinUrl = createJoinUrl state.Config.ConfigId
         ConfigView.configPage js state joinUrl dispatch
 
+    | PlayPage, Playing state ->
+        PlayView.playPage state dispatch
+
     | _ ->
         View.notImplementedPage
 
