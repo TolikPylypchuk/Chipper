@@ -10,7 +10,7 @@ open Microsoft.Extensions.Hosting
 open FSharp.Control.Reactive
 
 open Blazored.LocalStorage
-open Bolero.Server.RazorHost
+open Bolero.Server
 
 open Chipper.Web.Services
 
