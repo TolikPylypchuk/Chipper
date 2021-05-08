@@ -17,7 +17,6 @@ open Chipper.Web.Services
 let configureServices (services: IServiceCollection) =
     services.AddRazorPages()
         .AddJsonOptions(fun options -> options.JsonSerializerOptions.Converters.Add(JsonFSharpConverter()))
-        .AddRazorRuntimeCompilation()
         |> ignore
 
     services.AddBlazoredLocalStorage(fun options ->
@@ -42,7 +41,7 @@ let configure (ctx : WebHostBuilderContext) (app: IApplicationBuilder) =
         .UseRouting()
         .UseEndpoints(fun endpoints ->
             endpoints.MapBlazorHub() |> ignore
-            endpoints.MapFallbackToPage("/_Host") |> ignore)
+            endpoints.MapFallbackToBolero(MainView.html ctx.HostingEnvironment) |> ignore)
         |> ignore
 
 let createHostBuilder args =
