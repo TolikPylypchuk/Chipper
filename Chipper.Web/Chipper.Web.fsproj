@@ -27,7 +27,7 @@
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Blazored.LocalStorage" Version="3.0.0" />
+    <PackageReference Include="Blazored.LocalStorage" Version="4.0.0" />
     <PackageReference Include="Bolero.Server" Version="0.17.25" />
     <PackageReference Include="Flurl" Version="3.0.2" />
     <PackageReference Include="FSharp.Control.Reactive" Version="5.0.2" />
