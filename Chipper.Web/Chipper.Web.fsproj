@@ -27,12 +27,12 @@
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Blazored.LocalStorage" Version="4.0.0" />
+    <PackageReference Include="Blazored.LocalStorage" Version="4.1.1" />
     <PackageReference Include="Bolero.Server" Version="0.17.25" />
     <PackageReference Include="Flurl" Version="3.0.2" />
     <PackageReference Include="FSharp.Control.Reactive" Version="5.0.2" />
-    <PackageReference Include="FSharp.SystemTextJson" Version="0.16.6" />
-    <PackageReference Include="FsToolkit.ErrorHandling" Version="2.2.0" />
+    <PackageReference Include="FSharp.SystemTextJson" Version="0.17.4" />
+    <PackageReference Include="FsToolkit.ErrorHandling" Version="2.5.0" />
     <PackageReference Include="LibSassBuilder" Version="1.6.2" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="5.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="5.0.1" />
