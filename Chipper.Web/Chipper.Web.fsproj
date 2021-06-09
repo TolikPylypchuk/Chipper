@@ -32,6 +32,7 @@
     <PackageReference Include="Flurl" Version="3.0.2" />
     <PackageReference Include="FSharp.Control.Reactive" Version="5.0.2" />
     <PackageReference Include="FSharp.SystemTextJson" Version="0.17.4" />
+    <PackageReference Include="FSharpPlus" Version="1.2.0" />
     <PackageReference Include="FsToolkit.ErrorHandling" Version="2.5.0" />
     <PackageReference Include="LibSassBuilder" Version="1.6.2" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="5.0.0" />
