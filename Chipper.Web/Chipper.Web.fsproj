@@ -27,14 +27,14 @@
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Blazored.LocalStorage" Version="4.1.1" />
+    <PackageReference Include="Blazored.LocalStorage" Version="4.1.2" />
     <PackageReference Include="Bolero.Server" Version="0.17.25" />
     <PackageReference Include="Flurl" Version="3.0.2" />
     <PackageReference Include="FSharp.Control.Reactive" Version="5.0.2" />
     <PackageReference Include="FSharp.SystemTextJson" Version="0.17.4" />
     <PackageReference Include="FSharpPlus" Version="1.2.0" />
-    <PackageReference Include="FsToolkit.ErrorHandling" Version="2.5.0" />
-    <PackageReference Include="LibSassBuilder" Version="1.6.2" />
+    <PackageReference Include="FsToolkit.ErrorHandling" Version="2.6.0" />
+    <PackageReference Include="LibSassBuilder" Version="1.6.3" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="5.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="5.0.1" />
     <PackageReference Include="Microsoft.Web.LibraryManager.Build" Version="2.1.113" />
@@ -43,7 +43,7 @@
     <ProjectReference Include="..\Chipper.Core\Chipper.Core.fsproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Update="FSharp.Core" Version="5.0.1" />
+    <PackageReference Update="FSharp.Core" Version="5.0.2" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="wwwroot\img\chips\" />
