@@ -1,3 +1,3 @@
 function showToast(elem) {
-    new bootstrap.Toast(elem).show();
+    new bootstrap.Toast(elem.value).show();
 }
