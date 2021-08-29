@@ -55,7 +55,7 @@ let html (env : IHostEnvironment) =
 
             link [ attr.rel "stylesheet"; attr.href "/lib/bootstrap/dist/css/bootstrap.min.css" ]
             link [ attr.rel "stylesheet"; attr.href "/lib/bootstrap-icons/font/bootstrap-icons.min.css" ]
-            link [ attr.rel "stylesheet"; attr.href "/css/index.css" ]
+            link [ attr.rel "stylesheet"; attr.href "/css/index.min.css" ]
         ]
 
         body [ attr.class' "vw-100 vh-100" ] [
