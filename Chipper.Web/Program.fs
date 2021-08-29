@@ -12,6 +12,7 @@ open FSharp.Control.Reactive
 open Blazored.LocalStorage
 open Bolero.Server
 
+open Chipper
 open Chipper.Web.Services
 
 let configureServices (services: IServiceCollection) =

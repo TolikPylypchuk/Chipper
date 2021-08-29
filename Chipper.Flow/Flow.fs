@@ -1,12 +1,10 @@
-module Chipper.Web.Flow
+module Chipper.Flow
 
 open FSharpPlus
 open FSharpPlus.Data
 
 open FsToolkit.ErrorHandling
 open Elmish
-
-open Chipper.Core
 
 let run env flow =
     ReaderT.run flow env

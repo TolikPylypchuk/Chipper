@@ -1,5 +1,5 @@
 [<AutoOpen>]
-module Chipper.Web.FlowUtil
+module Chipper.FlowUtil
 
 open FSharpPlus
 open Elmish

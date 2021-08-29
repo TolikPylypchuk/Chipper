@@ -2,7 +2,7 @@ module Chipper.Web.GameStartView
 
 open Bolero.Html
 
-open Chipper.Core
+open Chipper
 
 let homePage dispatch =
     div [ attr.class' "h-100 d-flex align-items-center" ] [

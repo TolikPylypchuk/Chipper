@@ -1,13 +1,7 @@
-namespace Chipper.Web
+namespace Chipper
 
 open System
 open FSharpPlus
-
-open Chipper.Core
-
-type AppSettings = {
-    UrlRoot : string
-}
 
 type Page =
     | HomePage

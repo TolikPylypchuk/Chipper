@@ -2,7 +2,7 @@ module Chipper.Web.PlayView
 
 open Bolero.Html
 
-open Chipper.Core
+open Chipper
 
 let playPage state dispatch =
     concat [

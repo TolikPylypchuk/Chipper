@@ -5,18 +5,8 @@
   <ItemGroup>
     <Compile Include="Util.fs" />
     <Compile Include="Model.fs" />
-    <Compile Include="Event.fs" />
-    <Compile Include="Message.fs" />
     <Compile Include="AppRouter.fs" />
     <Compile Include="ToastComponent.fs" />
-    <Compile Include="LocalStorage.fs" />
-    <Compile Include="FlowEnv.fs" />
-    <Compile Include="FlowUtil.fs" />
-    <Compile Include="Flow.fs" />
-    <Compile Include="EventFlow.fs" />
-    <Compile Include="GameStartFlow.fs" />
-    <Compile Include="ConfigFlow.fs" />
-    <Compile Include="PlayFlow.fs" />
     <Compile Include="View.fs" />
     <Compile Include="GameStartView.fs" />
     <Compile Include="ConfigView.fs" />
@@ -27,7 +17,7 @@
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Blazored.LocalStorage" Version="4.1.2" />
+    <PackageReference Include="Blazored.LocalStorage" Version="4.1.5" />
     <PackageReference Include="Bolero.Server" Version="0.17.25" />
     <PackageReference Include="Flurl" Version="3.0.2" />
     <PackageReference Include="FSharp.Control.Reactive" Version="5.0.2" />
@@ -41,6 +31,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Chipper.Core\Chipper.Core.fsproj" />
+    <ProjectReference Include="..\Chipper.Flow\Chipper.Flow.fsproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Update="FSharp.Core" Version="5.0.2" />

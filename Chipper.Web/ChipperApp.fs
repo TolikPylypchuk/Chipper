@@ -11,7 +11,7 @@ open Flurl
 open Bolero
 open Bolero.Html
 
-open Chipper.Core
+open Chipper
 
 let init : Flow<Model> = monad {
     let model = { Page = HomePage; State = NoState; LocalState = None; IsLoaded = false }

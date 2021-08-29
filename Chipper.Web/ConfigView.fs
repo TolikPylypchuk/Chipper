@@ -2,7 +2,7 @@ module Chipper.Web.ConfigView
 
 open Bolero.Html
 
-open Chipper.Core
+open Chipper
 
 let private header js state joinUrl dispatch =
     concat [

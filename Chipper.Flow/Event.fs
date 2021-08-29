@@ -1,8 +1,6 @@
-namespace Chipper.Web
+namespace Chipper
 
-open Elmish
-
-open Chipper.Core
+open Chipper
 
 type Event =
     | PlayerAccessRequested of PlayerJoinRequest

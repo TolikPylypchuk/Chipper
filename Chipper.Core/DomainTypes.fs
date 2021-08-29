@@ -1,4 +1,4 @@
-namespace Chipper.Core
+namespace Chipper
 
 open System
 

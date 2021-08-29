@@ -1,6 +1,4 @@
-namespace Chipper.Web
-
-open Chipper.Core
+namespace Chipper
 
 type GenericMessage =
     | NoMessage

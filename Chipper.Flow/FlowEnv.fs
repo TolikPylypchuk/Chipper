@@ -1,11 +1,9 @@
-namespace Chipper.Web
+namespace Chipper
 
 open FSharpPlus
 open FSharpPlus.Data
 
 open Elmish
-
-open Chipper.Core
 
 type Env = {
     Storage : LocalStorage

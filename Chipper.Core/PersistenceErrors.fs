@@ -1,4 +1,4 @@
-namespace Chipper.Core
+namespace Chipper
 
 type GetSessionError =
     | SessionNotFound of GameSessionId

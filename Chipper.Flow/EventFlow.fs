@@ -1,9 +1,7 @@
-module Chipper.Web.EventFlow
+module Chipper.EventFlow
 
 open FSharpPlus
 open FSharpPlus.Data
-
-open Chipper.Core
 
 let private onPlayerAccessRequested state request model = monad {
     let config = { state.Config with ConfigPlayerRequests = state.Config.ConfigPlayerRequests @ [ request ] }

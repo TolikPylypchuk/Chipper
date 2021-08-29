@@ -1,11 +1,8 @@
-module Chipper.Web.GameStartFlow
+module Chipper.GameStartFlow
 
 open FSharpPlus
 
 open Elmish
-
-open Chipper.Core
-open Chipper.Web
 
 let startSession model =
     { model with Page = StartPage; State = AddingSessionName <| Model.createAddSessionState "" "" } |> pureFlow

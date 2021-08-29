@@ -10,8 +10,7 @@ open FSharp.Control.Reactive
 
 open Blazored.LocalStorage
 
-open Chipper.Core
-open Chipper.Web
+open Chipper
 
 type EventSubject = EventSubject of System.Reactive.Subjects.Subject<GameSessionEvent>
 

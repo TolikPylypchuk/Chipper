@@ -1,4 +1,4 @@
-namespace Chipper.Web
+namespace Chipper
 
 type GetLocalState = unit -> Async<LocalState>
 type SetLocalState = LocalState -> Async<unit>

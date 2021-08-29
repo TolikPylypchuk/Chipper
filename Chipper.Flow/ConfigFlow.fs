@@ -1,4 +1,4 @@
-module Chipper.Web.ConfigFlow
+module Chipper.ConfigFlow
 
 open FSharpPlus
 open FSharpPlus.Data
@@ -6,9 +6,6 @@ open FSharpPlus.Data
 open FsToolkit.ErrorHandling
 
 open Elmish
-
-open Chipper.Core
-open Chipper.Web
 
 let private doAcceptPlayerRequest playerId state name model : Flow<Model> = monad {
     let playerRequests =

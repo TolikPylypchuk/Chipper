@@ -4,6 +4,8 @@ module Chipper.Web.AppRouter
 open System
 open Bolero
 
+open Chipper
+
 let router = {
     getEndPoint = fun model -> model.Page
     setRoute = fun path ->
