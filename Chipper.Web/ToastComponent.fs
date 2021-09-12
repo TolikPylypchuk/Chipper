@@ -34,11 +34,13 @@ module Toast =
                     text <|
                         $"It appears that you were previously trying to join a game: {sessionName}. " +
                         "Would you like to continue?"
-                | AwaitingGameStart { ValidGameSessionName = GameSessionName sessionName } ->
+                | AwaitingGameSessionStart { ValidGameSessionName = GameSessionName sessionName } ->
                     text <|
                         $"It appears that you were previously waiting to start a game: {sessionName}. " +
                         "Would you like to continue?"
-                | Playing { GameSession = gameSession } ->
+                | AwaitingGameStart { GameSession = gameSession }
+                | AwaitingTurn { GameSession = gameSession }
+                | Betting { GameState = { GameSession = gameSession } } ->
                     text <|
                         "It appears that you were previously playing a game: " +
                         $"{gameSession |> GameSession.name |> GameSessionName.value}. " +

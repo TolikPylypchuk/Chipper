@@ -22,6 +22,9 @@ type GameSessionError =
     | InvalidChipDistribution
     | InvalidBetRoundNumber of BetRoundNumberError
 
+type GameError =
+    | InvalidFirstPlayer of string
+
 type DomainError =
     | ChipError of ChipError
     | BetAmountError of BetAmountError
@@ -30,3 +33,4 @@ type DomainError =
     | GameSessionNameError of GameSessionNameError
     | BetRoundNumberError of BetRoundNumberError
     | GameSessionError of GameSessionError
+    | GameError of GameError

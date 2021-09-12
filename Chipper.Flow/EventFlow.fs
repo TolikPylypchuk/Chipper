@@ -13,7 +13,7 @@ let private onPlayerAccessRequested state request model = monad {
 }
 
 let private onPlayerAccepted player model : Flow<Model> = monad {
-    let newState = AwaitingGameStart player
+    let newState = AwaitingGameSessionStart player
     do! Flow.setStateSimple newState
     return { model with State = newState }
 }
@@ -30,7 +30,7 @@ let private onPlayerRemoved player model : Flow<Model> = monad {
 
 let private onPlayerRenamed player renameInfo model : Flow<Model> = monad {
     let renamedPlayer = { player with ValidName = renameInfo.NewName }
-    do! Flow.setStateSimple <| AwaitingGameStart renamedPlayer
+    do! Flow.setStateSimple <| AwaitingGameSessionStart renamedPlayer
     return { model with State = AwaitingGameStartRenamed (renamedPlayer, renameInfo) }
 }
 
@@ -61,7 +61,7 @@ let private onGameSessionNameChangedWhenAwaitingJoinRejected player newName mode
     { model with State = AwaitingJoinRejected { player with ValidGameSessionName = newName } } |> pureFlow
 
 let private onGameSessionNameChangedWhenAwaitingGameStart player newName model =
-    { model with State = AwaitingGameStart { player with ValidGameSessionName = newName } } |> pureFlow
+    { model with State = AwaitingGameSessionStart { player with ValidGameSessionName = newName } } |> pureFlow
 
 let private onGameSessionNameChangedWhenAwaitingGameStartRenamed player renameInfo newName model =
     let player = { player with ValidGameSessionName = newName }
@@ -85,11 +85,17 @@ let private onGameSessionStarted gameSession joiningPlayer model =
     match player with
     | Some player ->
         monad {
-            let state = Playing { GameSession = gameSession; Player = player }
+            let state = AwaitingGameStart { GameSession = gameSession; Player = player }
             do! Flow.setStateSimple state
             return { model with Page = PlayPage; State = state }
         }
     | None -> model |> pureFlow
+
+let private onGameStarted game (state : GameSessionState) model = monad {
+    let state = AwaitingTurn { Game = game; GameSession = state.GameSession; Player = state.Player }
+    do! Flow.setStateSimple state
+    return { model with Page = PlayPage; State = state }
+}
 
 let receiveEvent event model =
     match event, model.State with
@@ -102,11 +108,11 @@ let receiveEvent event model =
     | PlayerRejected playerId, AwaitingJoinConfirmation player when player.ValidId = playerId ->
         model |> onPlayerRejected player
 
-    | PlayerRenamed renameInfo, (AwaitingGameStart player | AwaitingGameStartRenamed (player, _))
+    | PlayerRenamed renameInfo, (AwaitingGameSessionStart player | AwaitingGameStartRenamed (player, _))
         when player.ValidId = renameInfo.PlayerId ->
         model |> onPlayerRenamed player renameInfo
 
-    | PlayerRemoved playerId, (AwaitingGameStart player | AwaitingGameStartRenamed (player, _))
+    | PlayerRemoved playerId, (AwaitingGameSessionStart player | AwaitingGameStartRenamed (player, _))
         when player.ValidId = playerId ->
         model |> onPlayerRemoved player
 
@@ -122,7 +128,7 @@ let receiveEvent event model =
     | GameSessionNameChanged newName, AwaitingJoinRejected player ->
         model |> onGameSessionNameChangedWhenAwaitingJoinRejected player newName
 
-    | GameSessionNameChanged newName, AwaitingGameStart player ->
+    | GameSessionNameChanged newName, AwaitingGameSessionStart player ->
         model |> onGameSessionNameChangedWhenAwaitingGameStart player newName
 
     | GameSessionNameChanged newName, AwaitingGameStartRenamed (player, renameInfo) ->
@@ -134,8 +140,11 @@ let receiveEvent event model =
     | GameSessionNameChanged newName, JoinRequestCanceled _ ->
         model |> onGameSessionNameChangedWhenJoinRequestCanceled newName
 
-    | GameSessionStarted gameSession, AwaitingGameStart player ->
+    | GameSessionStarted gameSession, AwaitingGameSessionStart player ->
         model |> onGameSessionStarted gameSession player
+
+    | GameStarted (game, player), AwaitingGameStart state when player.Id <> state.Player.Id ->
+        model |> onGameStarted game state
 
     | _ ->
         model |> pureFlow

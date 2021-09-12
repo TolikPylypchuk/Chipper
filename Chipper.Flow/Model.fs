@@ -64,19 +64,31 @@ type GameSessionState = {
     Player : Player
 }
 
+type ActiveGameState = {
+    Game : Game
+    GameSession : GameSession
+    Player : Player
+}
+
+type BettingState = {
+    GameState : ActiveGameState
+}
+
 type LocalState =
     | NoState
     | AddingSessionName of AddSessionState
     | JoiningSession of JoiningPlayer
     | JoiningInvalidSession
     | AwaitingJoinConfirmation of ValidJoiningPlayer
-    | AwaitingGameStart of ValidJoiningPlayer
+    | AwaitingGameSessionStart of ValidJoiningPlayer
     | AwaitingJoinRejected of ValidJoiningPlayer
     | AwaitingGameStartRemoved of ValidJoiningPlayer
     | AwaitingGameStartRenamed of ValidJoiningPlayer * PlayerRenameInfo
     | JoinRequestCanceled of GameSessionName
     | ConfiguringSession of ConfigSessionState
-    | Playing of GameSessionState
+    | AwaitingGameStart of GameSessionState
+    | AwaitingTurn of ActiveGameState
+    | Betting of BettingState
 
 type Model = {
     Page : Page

@@ -39,7 +39,7 @@ let private getJoinConfirmationState repo player = async {
             if config.ConfigPlayers
                 |> PlayerList.configPlayers
                 |> List.exists (fun player' -> player'.Id = player.ValidId)
-            then AwaitingGameStart player
+            then AwaitingGameSessionStart player
             else AwaitingJoinConfirmation player
 
         return Some localState
@@ -47,7 +47,7 @@ let private getJoinConfirmationState repo player = async {
         return None
 }
 
-let private getAwaitingGameStartState repo player = async {
+let private getAwaitingGameSessionStartState repo player = async {
     match! repo |> Persistence.getSession player.ValidGameSessionId with
     | Ok (ConfigurableSession config) ->
         let player =
@@ -56,15 +56,29 @@ let private getAwaitingGameStartState repo player = async {
                 ValidGameSessionName = config.ConfigName
             }
 
-        return Some <| AwaitingGameStart player
+        return Some <| AwaitingGameSessionStart player
     | _ ->
         return None
 }
 
-let private getPlayingState repo gameSessionState = async {
+let private getAwaitingGameStartState repo (gameSessionState : GameSessionState) = async {
     match! repo |> Persistence.getSession (gameSessionState.GameSession |> GameSession.id) with
     | Ok (PersistentSession gameSession) ->
-        return Some <| Playing { GameSession = gameSession; Player = gameSessionState.Player }
+        return Some <| AwaitingGameStart { GameSession = gameSession; Player = gameSessionState.Player }
+    | _ ->
+        return None
+}
+
+let private getPlayingState repo gameState = async {
+    match! repo |> Persistence.getSession (gameState.GameSession |> GameSession.id) with
+    | Ok (PersistentSession gameSession) ->
+        match gameSession |> GameSession.currentGame with
+        | Some game when gameState.Player.Id = game.CurrentPlayer.Id ->
+            return Some <| Betting { GameState = { Game = game; GameSession = gameSession; Player = gameState.Player } }
+        | Some game ->
+            return Some <| AwaitingTurn { Game = game; GameSession = gameSession; Player = gameState.Player }
+        | None ->
+            return None
     | _ ->
         return None
 }
@@ -79,8 +93,9 @@ let getState : Flow<Async<LocalState>> = monad {
             match localState with
             | ConfiguringSession { Config = config } -> config |> getConfigSessionState repo
             | AwaitingJoinConfirmation player -> player |> getJoinConfirmationState repo
-            | AwaitingGameStart player -> player |> getAwaitingGameStartState repo
-            | Playing gameSessionState -> gameSessionState |> getPlayingState repo
+            | AwaitingGameSessionStart player -> player |> getAwaitingGameSessionStartState repo
+            | AwaitingGameStart gameSessionState -> gameSessionState |> getAwaitingGameStartState repo
+            | AwaitingTurn gameState | Betting { GameState = gameState } -> gameState |> getPlayingState repo
             | _ -> async.Return None
 
         match currentState with
@@ -159,9 +174,19 @@ let private loadConfiguringState id state model : Flow<Model> = monad {
     return { model with State = state; LocalState = None; IsLoaded = true }
 }
 
-let private loadPlayingState state model : Flow<Model> = monad {
+let private loadAwaitingGameStartState (state : GameSessionState) model : Flow<Model> = monad {
     do! createEventLoop (state.GameSession |> GameSession.id)
-    return { model with State = Playing state; LocalState = None; IsLoaded = true }
+    return { model with State = AwaitingGameStart state; LocalState = None; IsLoaded = true }
+}
+
+let private loadAwaitingTurnState state model : Flow<Model> = monad {
+    do! createEventLoop (state.GameSession |> GameSession.id)
+    return { model with State = AwaitingTurn state; LocalState = None; IsLoaded = true }
+}
+
+let private loadBettingState state model : Flow<Model> = monad {
+    do! createEventLoop (state.GameState.GameSession |> GameSession.id)
+    return { model with State = Betting state; LocalState = None; IsLoaded = true }
 }
 
 let loadState state model =
@@ -171,12 +196,16 @@ let loadState state model =
         { model with State = AddingSessionName newState; LocalState = Some state; IsLoaded = true } |> pureFlow
     | JoinPage _, NoState ->
         { model with LocalState = None; IsLoaded = true } |> pureFlow
-    | JoinPage _, (AwaitingJoinConfirmation player | AwaitingGameStart player as state) ->
+    | JoinPage _, (AwaitingJoinConfirmation player | AwaitingGameSessionStart player as state) ->
         model |> loadJoinPageAwaitingState player state
     | ConfigurePage, (ConfiguringSession { Config = { ConfigId = id } } as state) ->
         model |> loadConfiguringState id state
-    | PlayPage, Playing state ->
-        model |> loadPlayingState state
+    | PlayPage, AwaitingGameStart state ->
+        model |> loadAwaitingGameStartState state
+    | PlayPage, AwaitingTurn state ->
+        model |> loadAwaitingTurnState state
+    | PlayPage, Betting state ->
+        model |> loadBettingState state
     | _, NoState ->
         { model with Page = HomePage; LocalState = None; IsLoaded = true } |> pureFlow
     | _ ->
@@ -193,19 +222,33 @@ let private recoverJoinAwaitingConfirmation player state model : Flow<Model> = m
     return { model with Page = JoinPage rawId; State = state; LocalState = None }
 }
 
-let private recoverPlayingGame state model : Flow<Model> = monad {
+let private recoverAwaitingGameStart (state : GameSessionState) model : Flow<Model> = monad {
     do! createEventLoop (state.GameSession |> GameSession.id)
-    return { model with Page = PlayPage; State = Playing state; LocalState = None }
+    return { model with Page = PlayPage; State = AwaitingGameStart state; LocalState = None }
+}
+
+let private recoverAwaitingTurn state model : Flow<Model> = monad {
+    do! createEventLoop (state.GameSession |> GameSession.id)
+    return { model with Page = PlayPage; State = AwaitingTurn state; LocalState = None }
+}
+
+let private recoverBetting state model : Flow<Model> = monad {
+    do! createEventLoop (state.GameState.GameSession |> GameSession.id)
+    return { model with Page = PlayPage; State = Betting state; LocalState = None }
 }
 
 let recoverLocalState model =
     match model.LocalState with
     | Some (ConfiguringSession { Config = { ConfigId = id } } as state) ->
         model |> recoverConfiguringSession id state
-    | Some (AwaitingJoinConfirmation player | AwaitingGameStart player as state) ->
+    | Some (AwaitingJoinConfirmation player | AwaitingGameSessionStart player as state) ->
         model |> recoverJoinAwaitingConfirmation player state
-    | Some (Playing state) ->
-        model |> recoverPlayingGame state
+    | Some (AwaitingGameStart state) ->
+        model |> recoverAwaitingGameStart state
+    | Some (AwaitingTurn state) ->
+        model |> recoverAwaitingTurn state
+    | Some (Betting state) ->
+        model |> recoverBetting state
     | _ ->
         { model with LocalState = None } |> pureFlow
 

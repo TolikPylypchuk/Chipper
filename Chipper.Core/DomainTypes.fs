@@ -15,7 +15,7 @@ type Bet = Bet of NonEmptyList<Chip>
 
 type Move =
     | Check
-    | Call of Bet
+    | Call
     | Raise of Bet
     | Fold
 
@@ -38,6 +38,8 @@ type GameId = GameId of Guid
 
 type Game = {
     Id : GameId
+    FirstPlayer : Player
+    CurrentPlayer : Player
     Rounds : BettingRound list
 }
 
@@ -337,6 +339,22 @@ module GameSession =
     let bettingType session = session.BettingType
     let raiseType session = session.RaiseType
     let games session = session.Games
+    let currentGame session = session.Games |> List.tryHead
+
+[<RequireQualifiedAccess>]
+module Game =
+    
+    let newGame id (firstPlayer : Player) session =
+        let players = session.Players |> PlayerList.value |> NonEmptyList.toList
+
+        players
+        |> List.tryFindIndex (fun player -> player.Id = firstPlayer.Id)
+        |> Option.map (fun index ->
+            let newIndex = if index = (players |> List.length) then 0 else index
+            let currentPlayer = players |> List.item newIndex
+            let game = { Id = id; FirstPlayer = firstPlayer; CurrentPlayer = currentPlayer; Rounds = [] }
+            (game, { session with Games = game :: session.Games }) |> Ok)
+        |> Option.defaultValue (firstPlayer.Name |> PlayerName.value |> InvalidFirstPlayer |> Error)
 
 [<AutoOpen>]
 module Patterns =

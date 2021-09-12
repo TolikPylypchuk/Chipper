@@ -40,10 +40,14 @@ type ConfigMessage =
     | InputBetRoundNumber of int
     | StartGameSession of GameSession
 
+type PlayMessage =
+    | StartGame
+
 type Message =
     | GenericMessage of GenericMessage
     | GameStartMessage of GameStartMessage
     | ConfigMessage of ConfigMessage
+    | PlayMessage of PlayMessage
 
 [<RequireQualifiedAccess>]
 module Message =
@@ -84,6 +88,8 @@ module Message =
     let setChipEqualDistributionValue chip num = SetChipEqualDistributionValue (chip, num) |> ConfigMessage
     let inputBetRoundNumber = InputBetRoundNumber >> ConfigMessage
     let startGameSession = StartGameSession >> ConfigMessage
+
+    let startGame = StartGame |> PlayMessage
 
     let handleError message =
         match message with

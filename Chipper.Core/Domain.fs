@@ -25,3 +25,5 @@ module Domain =
     let betRoundNumber = BetRoundNumber.create >> asDomainError BetRoundNumberError
 
     let gameSession = GameSession.fromConfig >> asDomainError GameSessionError
+
+    let newGame id firstPlayer = Game.newGame id firstPlayer >> asDomainError GameError

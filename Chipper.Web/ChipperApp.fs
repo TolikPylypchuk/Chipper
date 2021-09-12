@@ -26,7 +26,7 @@ let updateGeneric message model =
         model |> pureFlow
     | SetError e, _ ->
         model |> Flow.setError e
-    | SetPage (JoinPage _ as page), (AwaitingJoinConfirmation _ | AwaitingGameStart _)  ->
+    | SetPage (JoinPage _ as page), (AwaitingJoinConfirmation _ | AwaitingGameSessionStart _)  ->
         model |> Flow.setPage page
     | SetPage (JoinPage id as page), _  ->
         model |> Flow.setJoinPage id page
@@ -85,7 +85,7 @@ let updateGameStart message model =
         model |> GameStartFlow.acceptRename player
 
     | CancelRequest,
-      (AwaitingGameStart player | AwaitingJoinConfirmation player | AwaitingGameStartRenamed (player, _)) ->
+      (AwaitingGameSessionStart player | AwaitingJoinConfirmation player | AwaitingGameStartRenamed (player, _)) ->
         model |> GameStartFlow.cancelRequest player
 
     | _ ->
@@ -142,11 +142,19 @@ let updateConfig message model =
     | _ ->
         model |> pureFlow
 
+let updatePlay message model =
+    match message, model.State with
+    | StartGame, AwaitingGameStart state ->
+        model |> PlayFlow.startGame state
+    | _ ->
+        model |> pureFlow
+
 let update message model =
     match message with
     | GenericMessage message -> updateGeneric message model
     | GameStartMessage message -> updateGameStart message model
     | ConfigMessage message -> updateConfig message model
+    | PlayMessage message -> updatePlay message model
 
 let mainView js createJoinUrl model dispatch =
     match model.Page, model.State with
@@ -165,7 +173,7 @@ let mainView js createJoinUrl model dispatch =
     | JoinPage _, AwaitingJoinConfirmation player ->
         GameStartView.awaitJoinPage player.ValidGameSessionName dispatch
 
-    | JoinPage _, AwaitingGameStart player ->
+    | JoinPage _, AwaitingGameSessionStart player ->
         GameStartView.lobbyPage player.ValidGameSessionName None dispatch
 
     | JoinPage _, AwaitingGameStartRenamed (player, renameInfo) ->
@@ -193,8 +201,8 @@ let mainView js createJoinUrl model dispatch =
         let joinUrl = createJoinUrl state.Config.ConfigId
         ConfigView.configPage js state joinUrl dispatch
 
-    | PlayPage, Playing state ->
-        PlayView.playPage state dispatch
+    | PlayPage, AwaitingGameStart state ->
+        PlayView.awaitingGameStart state dispatch
 
     | _ ->
         View.notImplementedPage

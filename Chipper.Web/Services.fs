@@ -93,4 +93,6 @@ let inMemoryRepository () =
         DeleteSession = fun id -> async { return storage.Remove(id) |> ignore |> Ok }
 
         GeneratePlayerId = fun () -> Guid.NewGuid() |> PlayerId |> async.Return
+
+        GenerateGameId = fun () -> Guid.NewGuid() |> GameId |> async.Return
     }

@@ -72,7 +72,7 @@ let requestAccessAgain player joinInfo model : Flow<Model> = monad {
 }
 
 let acceptRename player model =
-    { model with State = AwaitingGameStart player } |> pureFlow
+    { model with State = AwaitingGameSessionStart player } |> pureFlow
 
 let cancelRequest player model : Flow<Model> = monad {
     do! Flow.clearStateSimple

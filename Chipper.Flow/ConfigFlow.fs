@@ -166,7 +166,7 @@ let startGameSession gameSession state model = monad {
         do! repo |> Persistence.updateSession (PersistentSession gameSession)
 
         let host = state.Config.ConfigPlayers |> PlayerList.configHost
-        let localState = Playing { GameSession = gameSession; Player = host }
+        let localState = AwaitingGameStart { GameSession = gameSession; Player = host }
 
         do! storage.SetState localState
 

@@ -8,6 +8,7 @@ open Chipper
 
 let router = {
     getEndPoint = fun model -> model.Page
+
     setRoute = fun path ->
         match path.Split('/', StringSplitOptions.RemoveEmptyEntries) with
         | [||] -> Some HomePage
@@ -18,6 +19,7 @@ let router = {
         | [| "not-implemented" |] -> Some NotImplementedPage
         | _ -> None
         |> Option.map Message.setPage
+
     getRoute = function
         | HomePage -> "/"
         | StartPage -> "/start"

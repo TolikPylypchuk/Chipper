@@ -11,6 +11,7 @@ type Event =
     | PlayerRequestCanceled of PlayerId
     | GameSessionNameChanged of GameSessionName
     | GameSessionStarted of GameSession
+    | GameStarted of Game * Player
 
 type GameSessionEvent = {
     GameSessionId : GameSessionId
