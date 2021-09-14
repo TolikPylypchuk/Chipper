@@ -3,7 +3,7 @@
   "isRoot": true,
   "tools": {
     "excubo.webcompiler": {
-      "version": "3.0.0-preview-6",
+      "version": "3.0.0-preview-9",
       "commands": [
         "webcompiler"
       ]
