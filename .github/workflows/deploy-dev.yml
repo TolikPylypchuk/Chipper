@@ -19,7 +19,7 @@ jobs:
 
       - name: Publish the app
         run: |
-          dotnet publish -c Release -r linux-x64 -o ./chipper --nologo
+          dotnet publish -c Release -r linux-x64 --no-self-contained -o ./chipper --nologo
           mv chipper/Chipper.Web chipper/chipper
         
       - name: Clear the target directory
