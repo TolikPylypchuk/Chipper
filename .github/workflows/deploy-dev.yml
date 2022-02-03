@@ -1,9 +1,6 @@
 name: Deploy the dev version of the app
 
 on:
-  push:
-    branches: [ dev ]
-
   workflow_dispatch:
 
 jobs:
